@@ -1,0 +1,307 @@
+openapi: 3.1.0
+
+info:
+  title: DOC Intelligence — API de triagem de documentos
+  version: 0.1.0
+  description: |
+    Contrato que um backend real deve implementar. Hoje é servido por um mock
+    (route handlers do Next.js sobre uma simulação em memória — ver
+    `docs/adr/ADR-0006.md`), mas nada aqui descreve o mock: descreve o serviço.
+
+    O vocabulário da carga é português do Brasil, igual ao produto.
+    Os tipos TypeScript equivalentes vivem em `lib/api/types.ts` e mudam junto
+    com este arquivo.
+
+    ## Ciclo de vida
+
+    ```
+    recebido ──▶ processando ──┬──▶ pronto
+                               ├──▶ em_conferencia
+                               └──▶ erro
+    ```
+
+    O servidor é dono de toda transição. O cliente nunca deriva status
+    localmente — ele relê o documento.
+
+    ## A regra que separa `pronto` de `em_conferencia`
+
+    Um documento vai para `em_conferencia` se, e somente se, **algum** campo
+    extraído tiver `confianca` **menor que 0.75**. Caso contrário vai para
+    `pronto`. Um backend real precisa aplicar exatamente esse limiar, senão a
+    interface e o servidor discordam sobre o que precisa de revisão humana.
+
+    ## Transporte
+
+    Não há WebSocket. O acompanhamento é por polling em `GET /documents`.
+
+servers:
+  - url: /api
+    description: Mesma origem da aplicação.
+
+tags:
+  - name: documentos
+    description: Envio e acompanhamento de documentos em triagem.
+
+paths:
+  /documents:
+    get:
+      tags: [documentos]
+      summary: Lista documentos
+      description: |
+        Ordenado do mais recente para o mais antigo. O filtro é aplicado antes
+        da paginação, então `paginacao.total` reflete o conjunto filtrado.
+
+        Uma `pagina` fora do intervalo é reduzida à última página válida em vez
+        de devolver lista vazia.
+      operationId: listarDocumentos
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Devolve só documentos neste status.
+          schema:
+            $ref: "#/components/schemas/DocumentStatus"
+        - name: pagina
+          in: query
+          required: false
+          description: Base 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: tamanhoPagina
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Página de documentos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+
+    post:
+      tags: [documentos]
+      summary: Envia um lote de documentos
+      description: |
+        Recebe N arquivos e cria N documentos em `recebido`. A ordem da resposta
+        acompanha a ordem de envio.
+
+        Responde **202**, não 201: os documentos existem, mas nada foi extraído
+        ainda. O cliente acompanha por polling.
+
+        O envio em si não falha por causa do modelo de extração — a falha
+        acontece depois, durante `processando`, e aparece como `status: erro`.
+      operationId: enviarDocumentos
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [arquivos]
+              properties:
+                arquivos:
+                  type: array
+                  minItems: 1
+                  description: Campo repetido, um por arquivo.
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "202":
+          description: Lote aceito. Documentos criados em `recebido`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+
+  /documents/{id}:
+    get:
+      tags: [documentos]
+      summary: Recupera um documento
+      operationId: obterDocumento
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: doc_0001
+      responses:
+        "200":
+          description: O documento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Não existe documento com esse id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+components:
+  responses:
+    ErroDeRequisicao:
+      description: Requisição malformada.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          examples:
+            statusInvalido:
+              value:
+                codigo: status_invalido
+                mensagem: "Status desconhecido: xpto. Valores aceitos: recebido, processando, pronto, erro, em_conferencia."
+            nenhumArquivo:
+              value:
+                codigo: nenhum_arquivo
+                mensagem: "Nenhum arquivo recebido no campo 'arquivos'."
+
+  schemas:
+    DocumentStatus:
+      type: string
+      description: |
+        `recebido` e `processando` são transitórios.
+        `pronto`, `em_conferencia` e `erro` são terminais.
+      enum:
+        - recebido
+        - processando
+        - pronto
+        - erro
+        - em_conferencia
+
+    ExtractedField:
+      type: object
+      required: [nome, valor, confianca]
+      properties:
+        nome:
+          type: string
+          description: Rótulo exibido na interface. Único dentro de um documento.
+          example: Número do processo
+        valor:
+          type: string
+          description: |
+            Sempre string no fio. Formatação e parsing são responsabilidade do
+            cliente — o servidor não impõe máscara nem tipo.
+          example: 0801234-56.2025.8.19.0001
+        confianca:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Certeza auto-declarada do modelo. Abaixo de 0.75 força `em_conferencia`.
+          example: 0.61
+
+    DocumentError:
+      type: object
+      required: [codigo, mensagem]
+      properties:
+        codigo:
+          type: string
+          description: Estável e legível por máquina. O cliente decide por ele, nunca pela mensagem.
+          enum:
+            - modelo_indisponivel
+            - documento_ilegivel
+        mensagem:
+          type: string
+          description: Texto pt-BR. Nomeia o objeto e o fato, sem desculpa.
+          example: O documento não pôde ser lido.
+
+    Document:
+      type: object
+      required: [id, nome, tipoMime, tamanhoBytes, status, enviadoEm, atualizadoEm, campos, erro]
+      properties:
+        id:
+          type: string
+          example: doc_0001
+        nome:
+          type: string
+          description: Nome original do arquivo, como enviado.
+          example: peticao.pdf
+        tipoMime:
+          type: string
+          example: application/pdf
+        tamanhoBytes:
+          type: integer
+          minimum: 0
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+        enviadoEm:
+          type: string
+          format: date-time
+          description: ISO 8601, UTC. Imutável.
+        atualizadoEm:
+          type: string
+          format: date-time
+          description: |
+            ISO 8601, UTC. É o instante da transição, não o instante da leitura —
+            reler um documento parado não muda este campo.
+        campos:
+          type: array
+          description: Vazio até o documento chegar em `pronto` ou `em_conferencia`.
+          items:
+            $ref: "#/components/schemas/ExtractedField"
+        erro:
+          description: Não-nulo apenas quando `status` é `erro`.
+          oneOf:
+            - $ref: "#/components/schemas/DocumentError"
+            - type: "null"
+
+    Pagination:
+      type: object
+      required: [pagina, tamanhoPagina, total, totalPaginas]
+      properties:
+        pagina:
+          type: integer
+          minimum: 1
+        tamanhoPagina:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+          description: Tamanho do conjunto filtrado, não do acervo inteiro.
+        totalPaginas:
+          type: integer
+          minimum: 1
+
+    UploadResponse:
+      type: object
+      required: [documentos]
+      properties:
+        documentos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+
+    DocumentListResponse:
+      type: object
+      required: [documentos, paginacao]
+      properties:
+        documentos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        paginacao:
+          $ref: "#/components/schemas/Pagination"
+
+    ApiError:
+      type: object
+      required: [codigo, mensagem]
+      properties:
+        codigo:
+          type: string
+        mensagem:
+          type: string
