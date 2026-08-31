@@ -48,6 +48,15 @@ const eslintConfig = defineConfig([
     },
   },
 
+  {
+    name: "doc-intelligence/scripts",
+    files: ["**/*.mjs"],
+    rules: {
+      // These are CLI scripts: stdout is their output, not a leftover debug line.
+      "no-console": "off",
+    },
+  },
+
   // Must stay last: switches off stylistic rules Prettier already owns.
   prettier,
 
