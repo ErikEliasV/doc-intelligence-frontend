@@ -8,9 +8,5 @@ export const metadata: Metadata = {
 export default async function RevisaoPage({ params }: PageProps<"/revisao/[id]">) {
   const { id } = await params;
 
-  return (
-    <main className="p-gutter flex-1">
-      <ReviewScreen id={id} />
-    </main>
-  );
+  return <ReviewScreen id={id} />;
 }
