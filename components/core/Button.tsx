@@ -1,65 +1,49 @@
-"use client";
-
-import { useState, type ButtonHTMLAttributes, type CSSProperties, type ReactNode } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { cn } from "../cn";
 
 /**
- * Ported from the design system's `Button.jsx`. Prop surface unchanged.
+ * Ported from the design system's `Button.jsx`.
  *
- * The press behaviour is the brand's signature interaction: the hard shadow
- * collapses and the control shifts down-right, as if pressed into paper.
+ * The press is the brand's signature interaction: the hard shadow collapses and
+ * the control shifts down-right, as if pressed into paper. The source drives it
+ * with `onPointerDown`/`onPointerUp` state; here it is the `active:` variant,
+ * which is both less code and more correct — the browser already knows not to
+ * apply `:active` to a disabled button, and it survives a pointer that leaves
+ * the button mid-press.
+ *
+ * No state means no `"use client"`: this renders wherever its parent does.
  */
-const base: CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "var(--space-2)",
-  font: "var(--type-button)",
-  letterSpacing: "var(--tracking-button)",
-  textTransform: "uppercase",
-  border: "var(--border-width) solid var(--border-strong)",
-  borderRadius: "var(--radius-pill)",
-  cursor: "pointer",
-  transition: "var(--transition-control)",
-  textDecoration: "none",
-  whiteSpace: "nowrap",
-  boxShadow: "var(--shadow-hard-sm)",
-};
+const BASE =
+  "inline-flex items-center justify-center gap-2 type-button border border-line-strong " +
+  "rounded-pill no-underline whitespace-nowrap transition-control " +
+  "disabled:opacity-45 disabled:cursor-not-allowed not-disabled:cursor-pointer";
 
-// Annotated rather than `satisfies`: the values must widen to CSSProperties so
-// `variants[variant].boxShadow` type-checks on the entries that omit it.
-const sizes: Record<"sm" | "md" | "lg", CSSProperties> = {
-  sm: {
-    height: "var(--control-height-sm)",
-    padding: "0 var(--space-4)",
-    fontSize: "var(--size-eyebrow)",
-  },
-  md: { height: "var(--control-height)", padding: "0 var(--space-5)" },
-  lg: { height: "46px", padding: "0 var(--space-6)", fontSize: "var(--size-body-sm)" },
-};
+const SIZES = {
+  sm: "h-control-sm px-4 text-[length:var(--size-eyebrow)]",
+  md: "h-control px-5",
+  // 46px is the design system's own literal — it is not on the 4px scale and
+  // has no token.
+  lg: "h-[46px] px-6 text-[length:var(--size-body-sm)]",
+} as const;
 
-const variants: Record<"primary" | "inverse" | "danger" | "outline" | "ghost", CSSProperties> = {
-  primary: { background: "var(--surface-accent)", color: "var(--text-on-accent)" },
-  inverse: { background: "var(--surface-inverse)", color: "var(--text-on-inverse)" },
-  danger: { background: "var(--surface-alert)", color: "var(--text-on-alert)" },
-  outline: { background: "transparent", color: "var(--text-display)" },
-  ghost: {
-    background: "transparent",
-    color: "var(--text-muted)",
-    border: "var(--border-width) solid transparent",
-    boxShadow: "none",
-  },
-};
+const VARIANTS = {
+  primary: "bg-accent text-on-accent shadow-hard-sm active:pressed",
+  inverse: "bg-inverse text-on-inverse shadow-hard-sm active:pressed",
+  danger: "bg-alert text-on-alert shadow-hard-sm active:pressed",
+  outline: "bg-transparent text-display shadow-hard-sm active:pressed",
+  // Ghost carries no shadow, so it has nothing to collapse.
+  ghost: "bg-transparent text-muted border-transparent shadow-none",
+} as const;
 
-export type ButtonVariant = keyof typeof variants;
-export type ButtonSize = keyof typeof sizes;
+export type ButtonVariant = keyof typeof VARIANTS;
+export type ButtonSize = keyof typeof SIZES;
 
-export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "style"> {
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   iconLeft?: ReactNode;
   iconRight?: ReactNode;
   full?: boolean;
-  style?: CSSProperties;
   children?: ReactNode;
 }
 
@@ -68,31 +52,14 @@ export function Button({
   size = "md",
   iconLeft,
   iconRight,
-  disabled,
   full,
-  style,
+  className,
   children,
   ...rest
 }: ButtonProps) {
-  const [down, setDown] = useState(false);
-
   return (
     <button
-      disabled={disabled}
-      onPointerDown={() => !disabled && setDown(true)}
-      onPointerUp={() => setDown(false)}
-      onPointerLeave={() => setDown(false)}
-      style={{
-        ...base,
-        ...sizes[size],
-        ...variants[variant],
-        width: full ? "100%" : undefined,
-        opacity: disabled ? 0.45 : 1,
-        cursor: disabled ? "not-allowed" : "pointer",
-        boxShadow: down ? "none" : (variants[variant].boxShadow ?? base.boxShadow),
-        transform: down ? "translate(var(--press-offset),var(--press-offset))" : "none",
-        ...style,
-      }}
+      className={cn(BASE, SIZES[size], VARIANTS[variant], full && "w-full", className)}
       {...rest}
     >
       {iconLeft}

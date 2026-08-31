@@ -1,54 +1,48 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { cn } from "../cn";
 
-/** Ported from the design system's `Card.jsx`. Prop surface unchanged. */
-const tones = {
-  paper: { background: "var(--surface-card)", color: "var(--text-body)" },
-  sunken: { background: "var(--surface-sunken)", color: "var(--text-body)" },
-  inverse: { background: "var(--surface-inverse)", color: "var(--text-on-inverse)" },
-  accent: { background: "var(--surface-accent)", color: "var(--text-on-accent)" },
-} satisfies Record<string, CSSProperties>;
+/**
+ * Ported from the design system's `Card.jsx`.
+ *
+ * One prop-surface change from the source: `padding` (which took a raw CSS
+ * string) is gone — padding is a Tailwind class the caller passes, like every
+ * other layout choice. See docs/adr/ADR-0010.md.
+ */
+const TONES = {
+  paper: "bg-card text-body",
+  sunken: "bg-sunken text-body",
+  inverse: "bg-inverse text-on-inverse",
+  accent: "bg-accent text-on-accent",
+} as const;
 
-export type CardTone = keyof typeof tones;
+export type CardTone = keyof typeof TONES;
 
 export interface CardProps {
   tone?: CardTone;
   /** Nested cards drop the hard shadow. */
   raised?: boolean;
-  padding?: string;
-  /** `true` for the yellow rule, or any CSS colour. */
+  /** `true` for the yellow rule, or a background utility class for another colour. */
   accentBar?: boolean | string;
-  style?: CSSProperties;
+  className?: string;
   children?: ReactNode;
 }
 
-export function Card({
-  tone = "paper",
-  raised = true,
-  padding = "var(--space-6)",
-  accentBar,
-  style,
-  children,
-}: CardProps) {
+export function Card({ tone = "paper", raised = true, accentBar, className, children }: CardProps) {
   return (
     <section
-      style={{
-        border: "var(--border-width) solid var(--border-strong)",
-        borderRadius: "var(--radius-none)",
-        boxShadow: raised ? "var(--shadow-hard)" : "none",
-        padding,
-        position: "relative",
-        ...tones[tone],
-        ...style,
-      }}
+      className={cn(
+        "relative rounded-none border border-line-strong",
+        raised && "shadow-hard",
+        TONES[tone],
+        className,
+      )}
     >
       {accentBar && (
         <span
-          style={{
-            position: "absolute",
-            inset: "0 0 auto 0",
-            height: 6,
-            background: accentBar === true ? "var(--yellow-500)" : accentBar,
-          }}
+          className={cn(
+            "absolute inset-x-0 top-0 h-1.5",
+            accentBar === true ? "bg-yellow-500" : accentBar,
+          )}
         />
       )}
       {children}

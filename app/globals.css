@@ -1,77 +1,205 @@
 @import "tailwindcss";
 @import "../styles/design-system/index.css";
 
-/* Bridge: exposes the design-system tokens as Tailwind utilities.
-   `inline` makes a utility emit var(--token) directly, so the design system
-   stays the single source of truth — change a token, the utility follows.
+/* ---------------------------------------------------------------------------
+   Design-system → Tailwind bridge.
 
-   Every key is `ds-` prefixed. That is not cosmetic: the design system's own
-   token names live in namespaces Tailwind also owns (--font-*, --radius-*,
-   --shadow-*, --space-*, --leading-*, --tracking-*, --ease-*). An unprefixed
-   key would expand to `--shadow-hard: var(--shadow-hard)`, a self-reference
-   that only resolves because the vendored CSS happens to be emitted after the
-   theme block. The prefix removes that dependency on emission order, and makes
-   `bg-ds-ink-900` visibly a design-system choice next to a stray `bg-zinc-50`.
+   The vendored CSS in styles/design-system/ is the single source of truth. This
+   file only exposes those tokens as utilities; every value below is a
+   `var(--token)`, never a literal, so changing a token changes the utility.
 
-   Only tokens worth a utility are mapped. Type roles (composed `font:`
-   shorthands), status/confidence colours and motion have no utility equivalent
-   and are consumed as var(--token) in CSS. Spacing is deliberately unmapped:
-   the design system's 4px base scale already matches Tailwind's own. */
+   Two mechanisms, for two different problems.
+
+   1. `@theme inline` for colours. The design system names them `--ink-900`,
+      `--surface-page` and so on, which never collide with Tailwind's
+      `--color-*` namespace — so these need no prefix and read naturally:
+      `bg-ink-900`, `text-muted`, `border-line`.
+
+   2. `@utility` for everything else. The design system's other token names sit
+      in namespaces Tailwind also owns (`--font-*`, `--radius-*`, `--shadow-*`),
+      where a theme key would expand to `--shadow-hard: var(--shadow-hard)` — a
+      self-reference. `@utility` sidesteps the theme namespace entirely, which
+      also unlocks the composed `font:` shorthands (`--type-body` and friends)
+      that have no Tailwind equivalent at all. See docs/adr/ADR-0010.md.
+
+   Spacing is deliberately unmapped: the design system's 4px scale already
+   matches Tailwind's own, so `gap-6` is `--space-6` (24px) with no work.
+--------------------------------------------------------------------------- */
+
 @theme inline {
-  --font-ds-display: var(--font-display);
-  --font-ds-ui: var(--font-ui);
-  --font-ds-mono: var(--font-mono);
+  /* Base scales */
+  --color-ink-900: var(--ink-900);
+  --color-ink-800: var(--ink-800);
+  --color-ink-700: var(--ink-700);
+  --color-ink-600: var(--ink-600);
+  --color-ink-500: var(--ink-500);
+  --color-ink-400: var(--ink-400);
+  --color-ink-300: var(--ink-300);
+  --color-ink-200: var(--ink-200);
 
-  --color-ds-ink-900: var(--ink-900);
-  --color-ds-ink-800: var(--ink-800);
-  --color-ds-ink-700: var(--ink-700);
-  --color-ds-ink-600: var(--ink-600);
-  --color-ds-ink-500: var(--ink-500);
-  --color-ds-ink-400: var(--ink-400);
-  --color-ds-ink-300: var(--ink-300);
-  --color-ds-ink-200: var(--ink-200);
+  --color-cream-50: var(--cream-50);
+  --color-cream-100: var(--cream-100);
+  --color-cream-200: var(--cream-200);
+  --color-cream-300: var(--cream-300);
 
-  --color-ds-cream-50: var(--cream-50);
-  --color-ds-cream-100: var(--cream-100);
-  --color-ds-cream-200: var(--cream-200);
-  --color-ds-cream-300: var(--cream-300);
+  --color-yellow-700: var(--yellow-700);
+  --color-yellow-600: var(--yellow-600);
+  --color-yellow-500: var(--yellow-500);
+  --color-yellow-400: var(--yellow-400);
+  --color-yellow-100: var(--yellow-100);
 
-  --color-ds-yellow-700: var(--yellow-700);
-  --color-ds-yellow-600: var(--yellow-600);
-  --color-ds-yellow-500: var(--yellow-500);
-  --color-ds-yellow-400: var(--yellow-400);
-  --color-ds-yellow-100: var(--yellow-100);
+  --color-red-700: var(--red-700);
+  --color-red-600: var(--red-600);
+  --color-red-500: var(--red-500);
+  --color-red-400: var(--red-400);
+  --color-red-100: var(--red-100);
 
-  --color-ds-red-700: var(--red-700);
-  --color-ds-red-600: var(--red-600);
-  --color-ds-red-500: var(--red-500);
-  --color-ds-red-400: var(--red-400);
-  --color-ds-red-100: var(--red-100);
+  --color-olive-700: var(--olive-700);
+  --color-olive-600: var(--olive-600);
+  --color-olive-500: var(--olive-500);
+  --color-olive-100: var(--olive-100);
 
-  --color-ds-olive-700: var(--olive-700);
-  --color-ds-olive-600: var(--olive-600);
-  --color-ds-olive-500: var(--olive-500);
-  --color-ds-olive-100: var(--olive-100);
+  /* Semantic surfaces */
+  --color-page: var(--surface-page);
+  --color-card: var(--surface-card);
+  --color-raised: var(--surface-raised);
+  --color-inverse: var(--surface-inverse);
+  --color-accent: var(--surface-accent);
+  --color-alert: var(--surface-alert);
+  --color-sunken: var(--surface-sunken);
+  --color-scrim: var(--surface-scrim);
 
-  --color-ds-page: var(--surface-page);
-  --color-ds-card: var(--surface-card);
-  --color-ds-raised: var(--surface-raised);
-  --color-ds-inverse: var(--surface-inverse);
-  --color-ds-accent: var(--surface-accent);
-  --color-ds-alert: var(--surface-alert);
-  --color-ds-sunken: var(--surface-sunken);
+  /* Semantic text */
+  --color-display: var(--text-display);
+  --color-body: var(--text-body);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-on-inverse: var(--text-on-inverse);
+  --color-on-accent: var(--text-on-accent);
+  --color-on-alert: var(--text-on-alert);
+  --color-eyebrow: var(--text-eyebrow);
 
-  --color-ds-border-strong: var(--border-strong);
-  --color-ds-border-default: var(--border-default);
-  --color-ds-border-subtle: var(--border-subtle);
+  /* Semantic lines */
+  --color-line-strong: var(--border-strong);
+  --color-line: var(--border-default);
+  --color-line-subtle: var(--border-subtle);
 
-  --radius-ds-xs: var(--radius-xs);
-  --radius-ds-sm: var(--radius-sm);
-  --radius-ds-md: var(--radius-md);
-  --radius-ds-pill: var(--radius-pill);
+  /* Document pipeline status */
+  --color-status-received-fg: var(--status-received-fg);
+  --color-status-received-bg: var(--status-received-bg);
+  --color-status-processing-fg: var(--status-processing-fg);
+  --color-status-processing-bg: var(--status-processing-bg);
+  --color-status-ready-fg: var(--status-ready-fg);
+  --color-status-ready-bg: var(--status-ready-bg);
+  --color-status-review-fg: var(--status-review-fg);
+  --color-status-review-bg: var(--status-review-bg);
+  --color-status-error-fg: var(--status-error-fg);
+  --color-status-error-bg: var(--status-error-bg);
 
-  --shadow-ds-hard-sm: var(--shadow-hard-sm);
-  --shadow-ds-hard: var(--shadow-hard);
-  --shadow-ds-hard-accent: var(--shadow-hard-accent);
-  --shadow-ds-overlay: var(--shadow-overlay);
+  /* Extraction confidence */
+  --color-confidence-high: var(--confidence-high);
+  --color-confidence-medium: var(--confidence-medium);
+  --color-confidence-low: var(--confidence-low);
+
+  /* Layout widths → max-w-content, max-w-prose */
+  --container-content: var(--max-content);
+  --container-prose: var(--max-prose);
+}
+
+/* --- Type roles -----------------------------------------------------------
+   Composed `font:` shorthands. The uppercase/tracking pairs that the design
+   system always applies together are bundled in, so a call site needs one
+   class rather than three. */
+
+@utility type-masthead {
+  font: var(--type-masthead);
+  letter-spacing: var(--tracking-masthead);
+}
+@utility type-display-1 {
+  font: var(--type-display-1);
+  letter-spacing: var(--tracking-display);
+}
+@utility type-display-2 {
+  font: var(--type-display-2);
+  letter-spacing: var(--tracking-display);
+}
+@utility type-display-3 {
+  font: var(--type-display-3);
+  letter-spacing: var(--tracking-display);
+}
+@utility type-title {
+  font: var(--type-title);
+  letter-spacing: var(--tracking-display);
+}
+@utility type-body {
+  font: var(--type-body);
+}
+@utility type-body-strong {
+  font: var(--type-body-strong);
+}
+@utility type-body-sm {
+  font: var(--type-body-sm);
+}
+@utility type-mono {
+  font: var(--type-mono);
+}
+@utility type-eyebrow {
+  font: var(--type-eyebrow);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+}
+@utility type-button {
+  font: var(--type-button);
+  letter-spacing: var(--tracking-button);
+  text-transform: uppercase;
+}
+
+/* --- Shape ---------------------------------------------------------------- */
+
+@utility rounded-pill {
+  border-radius: var(--radius-pill);
+}
+@utility rounded-xs {
+  border-radius: var(--radius-xs);
+}
+@utility shadow-hard {
+  box-shadow: var(--shadow-hard);
+}
+@utility shadow-hard-sm {
+  box-shadow: var(--shadow-hard-sm);
+}
+@utility shadow-hard-accent {
+  box-shadow: var(--shadow-hard-accent);
+}
+@utility shadow-overlay {
+  box-shadow: var(--shadow-overlay);
+}
+
+/* --- Controls -------------------------------------------------------------
+   Fixed heights the 4px scale does not cover (38px, 30px). */
+
+@utility h-control {
+  height: var(--control-height);
+}
+@utility h-control-sm {
+  height: var(--control-height-sm);
+}
+@utility h-row {
+  min-height: var(--row-height);
+}
+@utility p-gutter {
+  padding: var(--gutter-page);
+}
+
+/* --- Motion ---------------------------------------------------------------
+   The brand's signature press: the hard shadow collapses and the control
+   shifts down-right, as if pressed into paper. Bundled because the two halves
+   are meaningless apart. */
+
+@utility transition-control {
+  transition: var(--transition-control);
+}
+@utility pressed {
+  box-shadow: none;
+  transform: translate(var(--press-offset), var(--press-offset));
 }

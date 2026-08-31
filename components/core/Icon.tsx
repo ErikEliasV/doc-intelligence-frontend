@@ -1,17 +1,14 @@
-import type { CSSProperties } from "react";
+import { cn } from "../cn";
 
 /**
  * Lucide glyphs, inlined.
  *
  * The design system's `Icon` pulls static SVGs from
  * `unpkg.com/lucide-static@0.417.0` and tints them with CSS `filter`, because a
- * plain `<img>` cannot inherit `currentColor`. Inlining the paths instead drops
- * a runtime request to a third party — the same trade the fonts made in
- * ADR-0003 — and lets the glyph take `currentColor` directly, so `light` and
- * `color` are honest colour props rather than filter hacks.
- *
- * The prop surface is unchanged from the design system, so screens written
- * against the original component keep working. See docs/adr/ADR-0009.md.
+ * plain `<img>` cannot inherit `currentColor`. Inlining the paths drops a
+ * runtime request to a third party — the same trade the fonts made in
+ * ADR-0003 — and lets the glyph take `currentColor`, so colour is just a text
+ * colour utility on the icon or on any ancestor.
  *
  * Only the glyphs actually used are here. Adding one means copying its paths
  * from lucide-static at the pinned version — do not hand-draw an icon.
@@ -85,14 +82,13 @@ export type IconName = keyof typeof PATHS;
 export interface IconProps {
   name: IconName;
   size?: number;
-  /** Shorthand for a glyph sitting on a dark surface. */
+  /** Shorthand for a glyph on a dark surface. Equivalent to `text-cream-50`. */
   light?: boolean;
   strokeWidth?: number;
-  color?: string;
-  style?: CSSProperties;
+  className?: string;
 }
 
-export function Icon({ name, size = 16, light, strokeWidth = 2, color, style }: IconProps) {
+export function Icon({ name, size = 16, light, strokeWidth = 2, className }: IconProps) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -106,12 +102,7 @@ export function Icon({ name, size = 16, light, strokeWidth = 2, color, style }: 
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
-      style={{
-        display: "inline-block",
-        flex: "0 0 auto",
-        color: color ?? (light ? "var(--cream-50)" : undefined),
-        ...style,
-      }}
+      className={cn("inline-block shrink-0", light && "text-cream-50", className)}
     >
       {PATHS[name]}
     </svg>

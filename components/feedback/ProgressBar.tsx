@@ -1,45 +1,31 @@
-import type { CSSProperties } from "react";
+import { cn } from "../cn";
 
 /**
- * Ported from the design system's `ProgressBar.jsx`. Prop surface unchanged.
+ * Ported from the design system's `ProgressBar.jsx`.
  *
- * The indeterminate sweep is the one looping animation the design system
- * allows. One deviation from the source: it declares the `ds-indeterminate`
- * keyframes in a `<style>` tag inside the component, which React then renders
- * once per instance. Here they live in `styles/design-system/keyframes.css`,
- * declared once for the whole app.
+ * Two deviations from the source. The `ds-indeterminate` keyframes moved to
+ * `styles/design-system/keyframes.css` — the source declares them in a `<style>`
+ * tag inside the component, which React renders once per mounted instance. And
+ * the determinate width is the one inline style left in the component set: it
+ * is a continuous value, not a class.
  */
 export interface ProgressBarProps {
   /** 0..100. Ignored when `indeterminate` is set. */
   value?: number;
   indeterminate?: boolean;
-  height?: number;
-  style?: CSSProperties;
+  /** Height is the caller's — the track sets none, so there is nothing to override. */
+  className?: string;
 }
 
-export function ProgressBar({ value = 0, indeterminate, height = 6, style }: ProgressBarProps) {
+export function ProgressBar({ value = 0, indeterminate, className }: ProgressBarProps) {
   return (
-    <span
-      style={{
-        display: "block",
-        height,
-        background: "var(--cream-300)",
-        border: "var(--border-width) solid var(--border-strong)",
-        overflow: "hidden",
-        ...style,
-      }}
-    >
+    <span className={cn("block overflow-hidden border border-line-strong bg-cream-300", className)}>
       <span
-        style={{
-          display: "block",
-          height: "100%",
-          background: "var(--surface-accent)",
-          width: indeterminate ? "38%" : `${Math.max(0, Math.min(100, value))}%`,
-          transition: "width var(--duration-slow) var(--ease-out)",
-          animation: indeterminate
-            ? "ds-indeterminate 1.4s var(--ease-in-out) infinite"
-            : undefined,
-        }}
+        className={cn(
+          "block h-full bg-accent transition-[width] duration-(--duration-slow) ease-(--ease-out)",
+          indeterminate && "w-[38%] animate-[ds-indeterminate_1.4s_var(--ease-in-out)_infinite]",
+        )}
+        style={indeterminate ? undefined : { width: `${Math.max(0, Math.min(100, value))}%` }}
       />
     </span>
   );

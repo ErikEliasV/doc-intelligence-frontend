@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function EnvioPage() {
   return (
-    <main style={{ padding: "var(--gutter-page)", flex: 1 }}>
+    <main className="p-gutter flex-1">
       <UploadScreen />
     </main>
   );
