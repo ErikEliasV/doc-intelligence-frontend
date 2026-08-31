@@ -1,0 +1,561 @@
+openapi: 3.1.0
+
+info:
+  title: DOC Intelligence — API de triagem de documentos
+  version: 0.1.0
+  description: |
+    Contrato que um backend real deve implementar. Hoje é servido por um mock
+    (route handlers do Next.js sobre uma simulação em memória — ver
+    `docs/adr/ADR-0006.md`), mas nada aqui descreve o mock: descreve o serviço.
+
+    O vocabulário da carga é português do Brasil, igual ao produto.
+    Os tipos TypeScript equivalentes vivem em `lib/api/types.ts` e mudam junto
+    com este arquivo.
+
+    ## Ciclo de vida
+
+    ```
+    recebido ──▶ processando ──┬──▶ pronto
+                               ├──▶ em_conferencia
+                               └──▶ erro
+    ```
+
+    O servidor é dono de toda transição. O cliente nunca deriva status
+    localmente — ele relê o documento.
+
+    ## A regra que separa `pronto` de `em_conferencia`
+
+    **Na extração**, um documento vai para `em_conferencia` se algum campo
+    extraído tiver `confianca` menor que 0.75; caso contrário vai para `pronto`.
+    Um backend real precisa aplicar exatamente esse limiar, senão a interface e
+    o servidor discordam sobre o que precisa de revisão humana.
+
+    **Depois disso a regra não se aplica mais.** Corrigir um campo não fecha o
+    documento, por melhor que a correção deixe os números: só
+    `POST /documents/{id}/confirmar` tira um documento de `em_conferencia`.
+    O status é guardado, não derivado. Ver `docs/adr/ADR-0012.md`.
+
+    ## Concorrência
+
+    Duas pessoas podem abrir o mesmo documento. Duas defesas, com papéis
+    diferentes:
+
+    - **`versao`** é a correção: toda escrita manda a versão que leu, e uma
+      versão velha recebe **409** em vez de sobrescrever. O 409 vem com o
+      documento atual em `atual`, para a interface mostrar o que mudou.
+    - **`revisaoEmAndamento`** é o aviso: diz que outra pessoa está com o
+      documento aberto. É informativo e **não bloqueia**.
+
+    ## Transporte
+
+    Não há WebSocket. O acompanhamento é por polling em `GET /documents`.
+
+servers:
+  - url: /api
+    description: Mesma origem da aplicação.
+
+tags:
+  - name: documentos
+    description: Envio e acompanhamento de documentos em triagem.
+
+paths:
+  /documents:
+    get:
+      tags: [documentos]
+      summary: Lista documentos
+      description: |
+        Ordenado do mais recente para o mais antigo. O filtro é aplicado antes
+        da paginação, então `paginacao.total` reflete o conjunto filtrado.
+
+        Uma `pagina` fora do intervalo é reduzida à última página válida em vez
+        de devolver lista vazia.
+      operationId: listarDocumentos
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Devolve só documentos neste status.
+          schema:
+            $ref: "#/components/schemas/DocumentStatus"
+        - name: pagina
+          in: query
+          required: false
+          description: Base 1.
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: tamanhoPagina
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Página de documentos.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DocumentListResponse"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+
+    post:
+      tags: [documentos]
+      summary: Envia um lote de documentos
+      description: |
+        Recebe N arquivos e cria N documentos em `recebido`. A ordem da resposta
+        acompanha a ordem de envio.
+
+        Responde **202**, não 201: os documentos existem, mas nada foi extraído
+        ainda. O cliente acompanha por polling.
+
+        O envio em si não falha por causa do modelo de extração — a falha
+        acontece depois, durante `processando`, e aparece como `status: erro`.
+      operationId: enviarDocumentos
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [arquivos]
+              properties:
+                arquivos:
+                  type: array
+                  minItems: 1
+                  description: Campo repetido, um por arquivo.
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        "202":
+          description: Lote aceito. Documentos criados em `recebido`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResponse"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+
+  /documents/{id}:
+    get:
+      tags: [documentos]
+      summary: Recupera um documento
+      operationId: obterDocumento
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+      responses:
+        "200":
+          description: O documento.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "404":
+          description: Não existe documento com esse id.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /documents/{id}/revisao:
+    post:
+      tags: [documentos]
+      summary: Abre um documento para conferência
+      description: |
+        Registra que alguém está com o documento aberto e devolve quem mais já
+        estava. POST, não GET, porque grava presença.
+
+        **Nunca recusa.** É aviso, não trava: um lock rígido num sistema sem
+        autenticação e sem encerramento de sessão deixa documentos presos atrás
+        de quem fechou o notebook. Ver `docs/adr/ADR-0012.md`.
+
+        A presença expira em 60s sem ser renovada.
+      operationId: abrirRevisao
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+        - name: x-revisor-id
+          in: header
+          required: true
+          description: |
+            Identificador de quem está revisando. Neste projeto é um id opaco de
+            sessão que o cliente gera. **Um backend real ignora este cabeçalho e
+            usa o usuário autenticado** — confiar nele permitiria se passar por
+            outra pessoa.
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        "200":
+          description: |
+            O documento. `revisaoEmAndamento` vem preenchido quando outra pessoa
+            chegou antes, e nulo quando o solicitante é o único.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+
+  /documents/{id}/campos:
+    patch:
+      tags: [documentos]
+      summary: Salva campos corrigidos
+      description: |
+        Parcial: só os campos alterados, casados por `nome`.
+
+        **Não muda o status.** Um documento corrigido continua em
+        `em_conferencia` até ser confirmado — é essa separação que permite
+        alguém corrigir metade e outra pessoa concluir.
+
+        Cada campo alterado passa a ter `origem: humano`, e mantém a `confianca`
+        que o modelo tinha declarado.
+      operationId: corrigirCampos
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrecaoCamposRequest"
+      responses:
+        "200":
+          description: O documento com os valores corrigidos, ainda em conferência.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "409":
+          $ref: "#/components/responses/Conflito"
+
+  /documents/{id}/confirmar:
+    post:
+      tags: [documentos]
+      summary: Conclui a conferência
+      description: |
+        Move o documento de `em_conferencia` para `pronto`. **A única coisa que
+        faz isso.**
+
+        Válido com ou sem correção anterior: confirmar um documento intocado é
+        como o revisor diz que o modelo acertou.
+      operationId: confirmarRevisao
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmacaoRequest"
+      responses:
+        "200":
+          description: O documento, agora em `pronto`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "409":
+          $ref: "#/components/responses/Conflito"
+
+  /documents/{id}/arquivo:
+    get:
+      tags: [documentos]
+      summary: Baixa o arquivo original
+      description: |
+        Os bytes enviados, para o visualizador da tela de revisão.
+
+        Um backend real devolveria uma URL assinada de object storage em vez de
+        transmitir a partir do processo da API.
+      operationId: obterArquivo
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+      responses:
+        "200":
+          description: O arquivo.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+
+components:
+  parameters:
+    IdDoDocumento:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: doc_0001
+
+  responses:
+    NaoEncontrado:
+      description: Não existe documento com esse id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    Conflito:
+      description: |
+        O documento não aceita a ação no estado em que está. Vem **com o
+        documento atual** em `atual`, para a interface mostrar o que mudou sem
+        precisar de uma segunda requisição.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ConflictError"
+          examples:
+            versaoDesatualizada:
+              value:
+                codigo: versao_desatualizada
+                mensagem: "O documento foi alterado por outra pessoa. Você tinha a versão 1, a atual é 2."
+            statusIncompativel:
+              value:
+                codigo: status_incompativel
+                mensagem: "Só um documento em conferência pode ser confirmado."
+
+    ErroDeRequisicao:
+      description: Requisição malformada.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+          examples:
+            statusInvalido:
+              value:
+                codigo: status_invalido
+                mensagem: "Status desconhecido: xpto. Valores aceitos: recebido, processando, pronto, erro, em_conferencia."
+            nenhumArquivo:
+              value:
+                codigo: nenhum_arquivo
+                mensagem: "Nenhum arquivo recebido no campo 'arquivos'."
+
+  schemas:
+    DocumentStatus:
+      type: string
+      description: |
+        `recebido` e `processando` são transitórios.
+        `pronto`, `em_conferencia` e `erro` são terminais.
+      enum:
+        - recebido
+        - processando
+        - pronto
+        - erro
+        - em_conferencia
+
+    ExtractedField:
+      type: object
+      required: [nome, valor, confianca, origem]
+      properties:
+        nome:
+          type: string
+          description: Rótulo exibido na interface. Único dentro de um documento.
+          example: Número do processo
+        valor:
+          type: string
+          description: |
+            Sempre string no fio. Formatação e parsing são responsabilidade do
+            cliente — o servidor não impõe máscara nem tipo.
+          example: 0801234-56.2025.8.19.0001
+        confianca:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: |
+            Certeza auto-declarada do modelo. Abaixo de 0.75 força
+            `em_conferencia` **na extração**.
+
+            Nunca é sobrescrita por uma correção: um valor que uma pessoa digitou
+            não ficou mais confiante, ficou autoritativo. Quem diz isso é
+            `origem`. Manter o número do modelo é a trilha de onde ele falhou.
+          example: 0.61
+        origem:
+          type: string
+          description: Quem produziu o valor atual.
+          enum: [modelo, humano]
+
+    DocumentError:
+      type: object
+      required: [codigo, mensagem]
+      properties:
+        codigo:
+          type: string
+          description: Estável e legível por máquina. O cliente decide por ele, nunca pela mensagem.
+          enum:
+            - modelo_indisponivel
+            - documento_ilegivel
+        mensagem:
+          type: string
+          description: Texto pt-BR. Nomeia o objeto e o fato, sem desculpa.
+          example: O documento não pôde ser lido.
+
+    Document:
+      type: object
+      required: [id, nome, tipoMime, tamanhoBytes, status, enviadoEm, atualizadoEm, campos, erro]
+      properties:
+        id:
+          type: string
+          example: doc_0001
+        nome:
+          type: string
+          description: Nome original do arquivo, como enviado.
+          example: peticao.pdf
+        tipoMime:
+          type: string
+          example: application/pdf
+        tamanhoBytes:
+          type: integer
+          minimum: 0
+        status:
+          $ref: "#/components/schemas/DocumentStatus"
+        enviadoEm:
+          type: string
+          format: date-time
+          description: ISO 8601, UTC. Imutável.
+        atualizadoEm:
+          type: string
+          format: date-time
+          description: |
+            ISO 8601, UTC. É o instante da transição, não o instante da leitura —
+            reler um documento parado não muda este campo.
+        campos:
+          type: array
+          description: Vazio até o documento chegar em `pronto` ou `em_conferencia`.
+          items:
+            $ref: "#/components/schemas/ExtractedField"
+        erro:
+          description: Não-nulo apenas quando `status` é `erro`.
+          oneOf:
+            - $ref: "#/components/schemas/DocumentError"
+            - type: "null"
+        versao:
+          type: integer
+          minimum: 1
+          description: |
+            Sobe a cada mudança feita pelo servidor. O cliente devolve a versão
+            que leu numa correção ou confirmação; divergência é 409.
+        revisaoEmAndamento:
+          description: |
+            Quem mais está com este documento aberto para conferência.
+            Consultivo — avisa, não bloqueia. Nulo quando ninguém mais está.
+          oneOf:
+            - $ref: "#/components/schemas/ReviewPresence"
+            - type: "null"
+
+    ReviewPresence:
+      type: object
+      required: [revisorId, desde]
+      properties:
+        revisorId:
+          type: string
+          description: |
+            Identificador opaco da sessão. Não há autenticação neste projeto, e
+            por isso o mock não sabe nomear a pessoa; um backend real traria o
+            usuário autenticado.
+        desde:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      required: [pagina, tamanhoPagina, total, totalPaginas]
+      properties:
+        pagina:
+          type: integer
+          minimum: 1
+        tamanhoPagina:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+          description: Tamanho do conjunto filtrado, não do acervo inteiro.
+        totalPaginas:
+          type: integer
+          minimum: 1
+
+    UploadResponse:
+      type: object
+      required: [documentos]
+      properties:
+        documentos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+
+    DocumentListResponse:
+      type: object
+      required: [documentos, paginacao]
+      properties:
+        documentos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Document"
+        paginacao:
+          $ref: "#/components/schemas/Pagination"
+
+    CorrecaoCamposRequest:
+      type: object
+      required: [versao, campos]
+      properties:
+        versao:
+          type: integer
+          description: A versão que o cliente leu. Divergência é 409.
+        campos:
+          type: array
+          description: Só os campos alterados.
+          items:
+            type: object
+            required: [nome, valor]
+            properties:
+              nome:
+                type: string
+              valor:
+                type: string
+
+    ConfirmacaoRequest:
+      type: object
+      required: [versao]
+      properties:
+        versao:
+          type: integer
+
+    ApiError:
+      type: object
+      required: [codigo, mensagem]
+      properties:
+        codigo:
+          type: string
+        mensagem:
+          type: string
+
+    ConflictError:
+      allOf:
+        - $ref: "#/components/schemas/ApiError"
+        - type: object
+          required: [atual]
+          properties:
+            codigo:
+              type: string
+              enum: [versao_desatualizada, status_incompativel]
+            atual:
+              $ref: "#/components/schemas/Document"
