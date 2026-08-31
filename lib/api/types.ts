@@ -61,9 +61,22 @@ export interface ExtractedField {
   nome: string;
   /** Always a string on the wire — formatting and parsing belong to the client. */
   valor: string;
-  /** 0..1 inclusive. */
+  /**
+   * 0..1 inclusive. **Always the model's own number**, never overwritten by a
+   * correction: a value a person typed did not become more confident, it became
+   * authoritative. `origem` is what says so. Keeping the model's figure is the
+   * audit trail of where it failed.
+   */
   confianca: number;
+  origem: FieldOrigin;
 }
+
+export const FieldOrigin = {
+  MODELO: "modelo",
+  HUMANO: "humano",
+} as const;
+
+export type FieldOrigin = (typeof FieldOrigin)[keyof typeof FieldOrigin];
 
 /**
  * The rule that splits `pronto` from `em_conferencia`. Part of the contract:
@@ -78,6 +91,16 @@ export interface DocumentError {
   /** Human-readable, pt-BR, states the fact without apology. */
   mensagem: string;
 }
+
+/** Conflict codes returned as 409 by the review endpoints. */
+export const ConflictCode = {
+  /** The document moved on since the client read it. */
+  VERSAO_DESATUALIZADA: "versao_desatualizada",
+  /** The action does not apply to the document's current status. */
+  STATUS_INCOMPATIVEL: "status_incompativel",
+} as const;
+
+export type ConflictCode = (typeof ConflictCode)[keyof typeof ConflictCode];
 
 export const DocumentErrorCode = {
   /** The extraction model did not answer in time. */
@@ -104,6 +127,40 @@ export interface Document {
   campos: ExtractedField[];
   /** Non-null only when `status === "erro"`. */
   erro: DocumentError | null;
+  /**
+   * Bumped on every server-side change. A client sends the version it read back
+   * with a correction; a mismatch is a 409 rather than a silent overwrite.
+   * See docs/adr/ADR-0012.md.
+   */
+  versao: number;
+  /**
+   * Who else has this document open for review, if anyone. Advisory: it warns,
+   * it does not block. Null when nobody else is in it.
+   */
+  revisaoEmAndamento: ReviewPresence | null;
+}
+
+/** Someone else holding the review screen open on this document. */
+export interface ReviewPresence {
+  /**
+   * Opaque per-session id. There is no authentication in this project, so the
+   * mock cannot name a person; a real backend would carry the user.
+   */
+  revisorId: string;
+  /** ISO 8601, UTC — when they opened it. */
+  desde: string;
+}
+
+/** Body of `PATCH /documents/{id}/campos`. Only the fields being corrected. */
+export interface CorrecaoCamposRequest {
+  /** The version the client read. A mismatch is a 409. */
+  versao: number;
+  campos: readonly { nome: string; valor: string }[];
+}
+
+/** Body of `POST /documents/{id}/confirmar`. */
+export interface ConfirmacaoRequest {
+  versao: number;
 }
 
 /** Result of `POST /api/documents`. One entry per accepted file, order preserved. */

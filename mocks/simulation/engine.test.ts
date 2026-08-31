@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CONFIDENCE_REVIEW_THRESHOLD, DocumentStatus, type Document } from "@/lib/api/types";
+import {
+  CONFIDENCE_REVIEW_THRESHOLD,
+  DocumentStatus,
+  FieldOrigin,
+  type Document,
+} from "@/lib/api/types";
 import { DEFAULT_SIMULATION_CONFIG, type SimulationConfig } from "./config";
 import {
   DocumentSimulation,
@@ -259,14 +264,23 @@ describe("low confidence routing", () => {
 
 describe("deriveStatus", () => {
   it("is the rule the backend must reproduce", () => {
-    expect(deriveStatus([{ nome: "a", valor: "1", confianca: 0.9 }])).toBe(DocumentStatus.PRONTO);
-    expect(deriveStatus([{ nome: "a", valor: "1", confianca: CONFIDENCE_REVIEW_THRESHOLD }])).toBe(
-      DocumentStatus.PRONTO,
-    );
+    expect(
+      deriveStatus([{ nome: "a", valor: "1", confianca: 0.9, origem: FieldOrigin.MODELO }]),
+    ).toBe(DocumentStatus.PRONTO);
     expect(
       deriveStatus([
-        { nome: "a", valor: "1", confianca: 0.99 },
-        { nome: "b", valor: "2", confianca: 0.5 },
+        {
+          nome: "a",
+          valor: "1",
+          confianca: CONFIDENCE_REVIEW_THRESHOLD,
+          origem: FieldOrigin.MODELO,
+        },
+      ]),
+    ).toBe(DocumentStatus.PRONTO);
+    expect(
+      deriveStatus([
+        { nome: "a", valor: "1", confianca: 0.99, origem: FieldOrigin.MODELO },
+        { nome: "b", valor: "2", confianca: 0.5, origem: FieldOrigin.MODELO },
       ]),
     ).toBe(DocumentStatus.EM_CONFERENCIA);
   });

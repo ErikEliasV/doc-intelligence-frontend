@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DocumentStatus, type Document } from "@/lib/api/types";
+import { DocumentStatus, FieldOrigin, type Document } from "@/lib/api/types";
 import {
   INTERVALO_BASE_MS,
   INTERVALO_MAXIMO_MS,
@@ -25,6 +25,8 @@ function doc(status: DocumentStatus, id = "doc_0001"): Document {
     atualizadoEm: "2026-01-15T11:59:00.000Z",
     campos: [],
     erro: null,
+    versao: 1,
+    revisaoEmAndamento: null,
   };
 }
 
@@ -151,9 +153,9 @@ describe("confiancaMinima", () => {
   it("devolve o menor campo — o que decidiu a conferência", () => {
     expect(
       confiancaMinima([
-        { nome: "a", valor: "1", confianca: 0.92 },
-        { nome: "b", valor: "2", confianca: 0.61 },
-        { nome: "c", valor: "3", confianca: 0.88 },
+        { nome: "a", valor: "1", confianca: 0.92, origem: FieldOrigin.MODELO },
+        { nome: "b", valor: "2", confianca: 0.61, origem: FieldOrigin.MODELO },
+        { nome: "c", valor: "3", confianca: 0.88, origem: FieldOrigin.MODELO },
       ]),
     ).toBe(0.61);
   });
