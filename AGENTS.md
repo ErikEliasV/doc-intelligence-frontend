@@ -79,8 +79,12 @@ e vendorizado em `styles/design-system/`.
 
 - **Os arquivos em `styles/design-system/tokens/` são cópias literais. Não edite
   à mão** — re-sincronize da origem e ponha overrides locais fora de `tokens/`.
-- Cor, tipo, espaço, forma e movimento sempre por token: `var(--ink-900)` ou o
-  utilitário Tailwind `ds-*` equivalente. Nunca hex cru, nunca px solto.
+- **Toda a interface é Tailwind. Não use `style={{}}`** — a única exceção viva
+  é uma largura contínua em `ProgressBar`. Ver `docs/adr/ADR-0010.md`.
+- Cor, tipo, espaço, forma e movimento sempre por token, via utilitário:
+  `bg-ink-900`, `type-display-2`, `shadow-hard`, `rounded-pill`. Os papéis de
+  tipo e os tokens que colidem com namespaces do Tailwind são `@utility` em
+  `app/globals.css`. Nunca hex cru, nunca px solto.
 - Regras de aderência do design system rodam no ESLint. Ver `docs/adr/ADR-0003.md`.
 
 Convenções de conteúdo que o design system impõe e que valem para todo texto de

@@ -13,3 +13,6 @@ marque o antigo como `Substituído por ADR-000Y`.
 | [0005](ADR-0005.md) | Contrato em OpenAPI, não em markdown               | Aceito |
 | [0006](ADR-0006.md) | Servir o mock por route handlers do Next.js        | Aceito |
 | [0007](ADR-0007.md) | Vitest como runner de testes                       | Aceito |
+| [0008](ADR-0008.md) | Upload e drag-and-drop sem biblioteca              | Aceito |
+| [0009](ADR-0009.md) | Portar componentes do design system sob demanda    | Aceito |
+| [0010](ADR-0010.md) | Tailwind em toda a interface, sem estilo inline    | Aceito |
