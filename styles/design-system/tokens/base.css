@@ -1,0 +1,11 @@
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--surface-page);color:var(--text-body);font:var(--type-body);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;color:var(--text-display);font-family:var(--font-display);letter-spacing:var(--tracking-display)}
+p{margin:0;text-wrap:pretty}
+a{color:var(--text-link);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+a:hover{color:var(--text-link-hover)}
+button,input,select,textarea{font-family:var(--font-ui)}
+:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.ds-eyebrow{font:var(--type-eyebrow);letter-spacing:var(--tracking-eyebrow);text-transform:uppercase;color:var(--text-eyebrow)}
+.ds-underline{position:relative;display:inline-block}
+.ds-underline::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:3px;background:var(--yellow-500)}

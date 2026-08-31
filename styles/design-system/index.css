@@ -1,0 +1,18 @@
+/* Entry point for the vendored DOC Intelligence design system.
+   Mirrors the source project's `styles.css`, with one deliberate change:
+   `tokens/fonts.css` (a Google Fonts CDN @import) is dropped in favour of
+   next/font/google + ./next-font.css. See docs/adr/ADR-0003.md.
+
+   The files under tokens/ are copied byte-for-byte from
+   https://claude.ai/design/p/8541ef4f-9db6-43f0-a4bc-b87fa37ac7a9 — do not edit
+   them by hand; re-sync instead and put local overrides in this directory. */
+/* Bare-string @import, not the source's `url()` form: Tailwind's bundler only
+   inlines the former, and a left-in-place @import lands after Tailwind's own
+   rules, which is invalid CSS. */
+@import "./tokens/colors.css";
+@import "./tokens/typography.css";
+@import "./tokens/spacing.css";
+@import "./tokens/shape.css";
+@import "./tokens/motion.css";
+@import "./next-font.css";
+@import "./tokens/base.css";

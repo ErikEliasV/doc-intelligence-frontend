@@ -1,0 +1,14 @@
+:root{
+  /* The reference is square-edged: sharp panels, pill buttons only. */
+  --radius-none:0px; --radius-xs:2px; --radius-sm:4px; --radius-md:6px; --radius-pill:999px;
+
+  --border-width:1px; --border-width-thick:2px;
+
+  /* Hard offset shadows (no blur) are the house style for raised objects. */
+  --shadow-hard-sm:2px 2px 0 var(--ink-900);
+  --shadow-hard:4px 4px 0 var(--ink-900);
+  --shadow-hard-accent:4px 4px 0 var(--yellow-500);
+  /* Soft shadows only for overlays that float above the page. */
+  --shadow-overlay:0 18px 44px rgba(19,17,16,.22);
+  --focus-ring:0 0 0 3px var(--yellow-400);
+}

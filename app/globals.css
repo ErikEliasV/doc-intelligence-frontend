@@ -1,26 +1,77 @@
 @import "tailwindcss";
+@import "../styles/design-system/index.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* Bridge: exposes the design-system tokens as Tailwind utilities.
+   `inline` makes a utility emit var(--token) directly, so the design system
+   stays the single source of truth — change a token, the utility follows.
 
+   Every key is `ds-` prefixed. That is not cosmetic: the design system's own
+   token names live in namespaces Tailwind also owns (--font-*, --radius-*,
+   --shadow-*, --space-*, --leading-*, --tracking-*, --ease-*). An unprefixed
+   key would expand to `--shadow-hard: var(--shadow-hard)`, a self-reference
+   that only resolves because the vendored CSS happens to be emitted after the
+   theme block. The prefix removes that dependency on emission order, and makes
+   `bg-ds-ink-900` visibly a design-system choice next to a stray `bg-zinc-50`.
+
+   Only tokens worth a utility are mapped. Type roles (composed `font:`
+   shorthands), status/confidence colours and motion have no utility equivalent
+   and are consumed as var(--token) in CSS. Spacing is deliberately unmapped:
+   the design system's 4px base scale already matches Tailwind's own. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-ds-display: var(--font-display);
+  --font-ds-ui: var(--font-ui);
+  --font-ds-mono: var(--font-mono);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+  --color-ds-ink-900: var(--ink-900);
+  --color-ds-ink-800: var(--ink-800);
+  --color-ds-ink-700: var(--ink-700);
+  --color-ds-ink-600: var(--ink-600);
+  --color-ds-ink-500: var(--ink-500);
+  --color-ds-ink-400: var(--ink-400);
+  --color-ds-ink-300: var(--ink-300);
+  --color-ds-ink-200: var(--ink-200);
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  --color-ds-cream-50: var(--cream-50);
+  --color-ds-cream-100: var(--cream-100);
+  --color-ds-cream-200: var(--cream-200);
+  --color-ds-cream-300: var(--cream-300);
+
+  --color-ds-yellow-700: var(--yellow-700);
+  --color-ds-yellow-600: var(--yellow-600);
+  --color-ds-yellow-500: var(--yellow-500);
+  --color-ds-yellow-400: var(--yellow-400);
+  --color-ds-yellow-100: var(--yellow-100);
+
+  --color-ds-red-700: var(--red-700);
+  --color-ds-red-600: var(--red-600);
+  --color-ds-red-500: var(--red-500);
+  --color-ds-red-400: var(--red-400);
+  --color-ds-red-100: var(--red-100);
+
+  --color-ds-olive-700: var(--olive-700);
+  --color-ds-olive-600: var(--olive-600);
+  --color-ds-olive-500: var(--olive-500);
+  --color-ds-olive-100: var(--olive-100);
+
+  --color-ds-page: var(--surface-page);
+  --color-ds-card: var(--surface-card);
+  --color-ds-raised: var(--surface-raised);
+  --color-ds-inverse: var(--surface-inverse);
+  --color-ds-accent: var(--surface-accent);
+  --color-ds-alert: var(--surface-alert);
+  --color-ds-sunken: var(--surface-sunken);
+
+  --color-ds-border-strong: var(--border-strong);
+  --color-ds-border-default: var(--border-default);
+  --color-ds-border-subtle: var(--border-subtle);
+
+  --radius-ds-xs: var(--radius-xs);
+  --radius-ds-sm: var(--radius-sm);
+  --radius-ds-md: var(--radius-md);
+  --radius-ds-pill: var(--radius-pill);
+
+  --shadow-ds-hard-sm: var(--shadow-hard-sm);
+  --shadow-ds-hard: var(--shadow-hard);
+  --shadow-ds-hard-accent: var(--shadow-hard-accent);
+  --shadow-ds-overlay: var(--shadow-overlay);
 }

@@ -1,0 +1,36 @@
+:root{
+  /* families */
+  --font-display:"Playfair Display",Georgia,"Times New Roman",serif;
+  --font-ui:"Archivo","Helvetica Neue",Helvetica,sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+
+  /* weights */
+  --weight-regular:400; --weight-medium:500; --weight-semibold:600;
+  --weight-bold:700; --weight-black:900;
+
+  /* sizes */
+  --size-masthead:72px; --size-display-1:52px; --size-display-2:38px; --size-display-3:28px;
+  --size-title:22px; --size-subtitle:18px;
+  --size-body:15px; --size-body-sm:13px; --size-caption:12px;
+  --size-eyebrow:11px; --size-mono:13px;
+
+  /* line heights */
+  --leading-tight:0.92; --leading-display:1.06; --leading-snug:1.28; --leading-body:1.55;
+
+  /* tracking */
+  --tracking-masthead:-0.035em; --tracking-display:-0.02em;
+  --tracking-body:0; --tracking-eyebrow:0.16em; --tracking-button:0.09em;
+
+  /* composed roles */
+  --type-masthead:var(--weight-black) var(--size-masthead)/var(--leading-tight) var(--font-display);
+  --type-display-1:var(--weight-black) var(--size-display-1)/var(--leading-display) var(--font-display);
+  --type-display-2:var(--weight-bold) var(--size-display-2)/var(--leading-display) var(--font-display);
+  --type-display-3:var(--weight-bold) var(--size-display-3)/var(--leading-snug) var(--font-display);
+  --type-title:var(--weight-bold) var(--size-title)/var(--leading-snug) var(--font-display);
+  --type-body:var(--weight-regular) var(--size-body)/var(--leading-body) var(--font-ui);
+  --type-body-strong:var(--weight-semibold) var(--size-body)/var(--leading-body) var(--font-ui);
+  --type-body-sm:var(--weight-regular) var(--size-body-sm)/var(--leading-body) var(--font-ui);
+  --type-eyebrow:var(--weight-bold) var(--size-eyebrow)/1.2 var(--font-ui);
+  --type-button:var(--weight-bold) var(--size-caption)/1 var(--font-ui);
+  --type-mono:var(--weight-medium) var(--size-mono)/1.5 var(--font-mono);
+}

@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+build
+coverage
+next-env.d.ts
+package-lock.json
+
+# Vendored from the DOC Intelligence design system — kept byte-identical to the
+# source so it can be re-synced. See docs/adr/ADR-0003.md.
+styles/design-system/

@@ -1,0 +1,9 @@
+/* Rebinds the three family tokens onto the self-hosted next/font/google faces
+   declared in app/layout.tsx, keeping the design system's original stacks as
+   fallbacks. This replaces the source `tokens/fonts.css`, which pulled the same
+   three families from the Google Fonts CDN. See docs/adr/ADR-0003.md. */
+:root{
+  --font-display:var(--font-playfair-display),Georgia,"Times New Roman",serif;
+  --font-ui:var(--font-archivo),"Helvetica Neue",Helvetica,sans-serif;
+  --font-mono:var(--font-ibm-plex-mono),ui-monospace,Menlo,monospace;
+}
