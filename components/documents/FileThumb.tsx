@@ -42,9 +42,7 @@ export function FileThumb({
   const mark = MARKS[state];
 
   return (
-    <figure
-      className={cn("m-0 w-[150px] border border-line-strong bg-card shadow-hard-sm", className)}
-    >
+    <figure className={cn("m-0 w-44 border border-line-strong bg-card shadow-hard-sm", className)}>
       <div className="relative grid h-26 place-items-center overflow-hidden border-b border-line-strong bg-sunken">
         {src ? (
           // next/image is deliberately not used: the source is a blob: URL from
@@ -74,21 +72,39 @@ export function FileThumb({
         )}
       </div>
 
+      {/* The source design system puts the status label and the size on one
+          line, sharing it via `justify-between`. They do not fit: "Aguardando"
+          alone costs 103px of the 152px available, so the size wrapped and then
+          spilled past the card border.
+
+          Size therefore sits with the filename — both are facts about the file,
+          while status is a changing state that earns its own line. Nothing
+          competes now: the status line has ~49px to spare, which is what keeps
+          it safe while the webfont is still loading and fallback metrics are
+          wider. The guards below (name yields, size never wraps) hold the
+          invariant regardless. */}
       <figcaption className="grid gap-1.5 px-3 pt-2 pb-3">
-        <span title={name} className="type-body-strong truncate">
-          {name}
+        {/* `min-w-0` on the row itself, not just on the name: a grid item
+            defaults to `min-width: auto`, so without it the flex row grows past
+            the figcaption instead of making the name yield. */}
+        <span className="flex min-w-0 items-baseline justify-between gap-2">
+          <span title={name} className="type-body-strong min-w-0 truncate">
+            {name}
+          </span>
+          {size && (
+            <span className="type-eyebrow shrink-0 whitespace-nowrap tracking-[0.06em] text-faint">
+              {size}
+            </span>
+          )}
         </span>
         <span
           className={cn(
-            "type-eyebrow flex items-center justify-between gap-1.5 tracking-[0.06em]",
+            "type-eyebrow flex min-w-0 items-center gap-1 tracking-[0.06em]",
             mark.color,
           )}
         >
-          <span className="inline-flex items-center gap-1">
-            <Icon name={mark.icon} size={11} strokeWidth={2.5} />
-            {mark.text}
-          </span>
-          {size && <span className="text-faint">{size}</span>}
+          <Icon name={mark.icon} size={11} strokeWidth={2.5} />
+          <span className="truncate">{mark.text}</span>
         </span>
         {state === "uploading" && <ProgressBar value={progress} indeterminate className="h-1" />}
       </figcaption>

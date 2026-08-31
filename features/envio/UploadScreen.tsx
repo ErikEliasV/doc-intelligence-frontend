@@ -76,8 +76,10 @@ export function UploadScreen() {
         </p>
       ) : (
         <ul className="m-0 flex list-none flex-wrap gap-4 p-0">
+          {/* w-44 mirrors FileThumb's own width, so the error message below
+              wraps to the card and not past it. */}
           {fila.map((item) => (
-            <li key={item.id} className="grid w-[150px] gap-1">
+            <li key={item.id} className="grid w-44 gap-1">
               <FileThumb
                 name={item.nome}
                 size={formatarTamanho(item.tamanhoBytes)}
