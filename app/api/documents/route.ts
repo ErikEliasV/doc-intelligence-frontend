@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server";
 import { DOCUMENT_STATUSES, type ApiError, type DocumentStatus } from "@/lib/api/types";
+import { guardarArquivo } from "@/mocks/blobStore";
 import { getSimulation } from "@/mocks/store";
 
 /** The store is mutable per-process state; caching a read of it would be wrong. */
@@ -69,6 +70,15 @@ export async function POST(request: NextRequest): Promise<Response> {
       tipoMime: arquivo.type || "application/octet-stream",
       tamanhoBytes: arquivo.size,
     })),
+  );
+
+  // The bytes are kept so the review screen can show the original beside the
+  // extracted fields. Order is guaranteed: `upload` preserves it.
+  await Promise.all(
+    resposta.documentos.map(async (documento, indice) => {
+      const arquivo = arquivos[indice];
+      guardarArquivo(documento.id, new Uint8Array(await arquivo.arrayBuffer()), documento.tipoMime);
+    }),
   );
 
   return Response.json(resposta, { status: 202 });

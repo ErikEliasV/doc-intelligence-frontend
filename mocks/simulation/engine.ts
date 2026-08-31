@@ -1,10 +1,13 @@
 import {
   CONFIDENCE_REVIEW_THRESHOLD,
+  ConflictCode,
   DocumentStatus,
+  FieldOrigin,
   type Document,
   type DocumentError,
   type DocumentListResponse,
   type ExtractedField,
+  type ReviewPresence,
   type UploadResponse,
 } from "@/lib/api/types";
 import { CONFIDENCE_BANDS, DEFAULT_SIMULATION_CONFIG, type SimulationConfig } from "./config";
@@ -40,7 +43,13 @@ export const MAX_PAGE_SIZE = 100;
 type Outcome =
   { kind: "sucesso"; campos: ExtractedField[] } | { kind: "erro"; erro: DocumentError };
 
-/** Immutable once created. `project()` turns it into a `Document` for a given instant. */
+/**
+ * Everything decided at upload time, plus the review state a human can change.
+ *
+ * The scheduling half stays immutable and `project()` remains a pure function of
+ * it and the clock. The review half (`campos`, `confirmado`, `versao`,
+ * `presenca`) is genuinely mutable — it is the record of what people did.
+ */
 interface ScheduledDocument {
   seq: number;
   id: string;
@@ -51,6 +60,14 @@ interface ScheduledDocument {
   processandoEmMs: number;
   concluiEmMs: number;
   outcome: Outcome;
+  /** Set by a correction; overrides the extracted fields once present. */
+  camposCorrigidos: ExtractedField[] | null;
+  /** Set when a person changes the document; otherwise the pipeline instant wins. */
+  atualizadoEmMs: number | null;
+  /** Set by an explicit confirmation. Only then does the status become `pronto`. */
+  confirmado: boolean;
+  versao: number;
+  presenca: ReviewPresence | null;
 }
 
 function iso(ms: number): string {
@@ -89,17 +106,30 @@ function generateFields(random: () => number, lowConfidence: boolean): Extracted
       random,
       index === lowIndex ? CONFIDENCE_BANDS.low : CONFIDENCE_BANDS.high,
     ),
+    origem: FieldOrigin.MODELO,
   }));
 }
 
-/** The contract rule: any field below the threshold sends the document to review. */
+/**
+ * The rule that splits `pronto` from `em_conferencia` **at extraction time**.
+ *
+ * It is not re-applied afterwards. Once a human is involved the status is
+ * stored, not derived: correcting the low field must not close the document on
+ * its own — only an explicit confirmation does. See docs/adr/ADR-0012.md.
+ */
 export function deriveStatus(campos: readonly ExtractedField[]): DocumentStatus {
   return campos.some((campo) => campo.confianca < CONFIDENCE_REVIEW_THRESHOLD)
     ? DocumentStatus.EM_CONFERENCIA
     : DocumentStatus.PRONTO;
 }
 
-/** Pure: the same record and instant always produce the same document. */
+/**
+ * Pure: the same record and instant always produce the same document.
+ *
+ * The clock decides the pipeline phase; the review state decides the rest. A
+ * corrected-but-unconfirmed document stays `em_conferencia` however good its
+ * numbers look — closing it is a person's decision, not a threshold's.
+ */
 function project(record: ScheduledDocument, nowMs: number): Document {
   const base = {
     id: record.id,
@@ -107,6 +137,8 @@ function project(record: ScheduledDocument, nowMs: number): Document {
     tipoMime: record.tipoMime,
     tamanhoBytes: record.tamanhoBytes,
     enviadoEm: iso(record.enviadoEmMs),
+    versao: record.versao,
+    revisaoEmAndamento: record.presenca,
   };
 
   if (nowMs < record.processandoEmMs) {
@@ -139,14 +171,42 @@ function project(record: ScheduledDocument, nowMs: number): Document {
     };
   }
 
+  const campos = record.camposCorrigidos ?? record.outcome.campos;
+  const statusInicial = deriveStatus(record.outcome.campos);
+
   return {
     ...base,
-    status: deriveStatus(record.outcome.campos),
-    atualizadoEm: iso(record.concluiEmMs),
-    campos: record.outcome.campos,
+    // The threshold only ever decided the *initial* status. After that the
+    // document leaves `em_conferencia` by confirmation alone.
+    status:
+      statusInicial === DocumentStatus.EM_CONFERENCIA && !record.confirmado
+        ? DocumentStatus.EM_CONFERENCIA
+        : DocumentStatus.PRONTO,
+    atualizadoEm: iso(record.atualizadoEmMs ?? record.concluiEmMs),
+    campos,
     erro: null,
   };
 }
+
+/**
+ * Thrown by the review methods when the document cannot accept the action.
+ * The route handler turns it into a 409 carrying the current document, so the
+ * client can show what changed instead of guessing.
+ */
+export class ConflictError extends Error {
+  readonly codigo: ConflictCode;
+  readonly atual: Document;
+
+  constructor(codigo: ConflictCode, mensagem: string, atual: Document) {
+    super(mensagem);
+    this.name = "ConflictError";
+    this.codigo = codigo;
+    this.atual = atual;
+  }
+}
+
+/** How long a review presence lasts without being refreshed. */
+export const PRESENCA_TTL_MS = 60_000;
 
 /**
  * In-memory stand-in for the document service. Holds no timers and no I/O, so
@@ -214,6 +274,103 @@ export class DocumentSimulation {
     };
   }
 
+  /**
+   * Registers that someone opened this document for review, and reports whoever
+   * else is already in it.
+   *
+   * Advisory, not a lock: it never refuses. A hard lock in a system with no
+   * authentication and no session teardown strands documents behind whoever
+   * closed their laptop — see docs/adr/ADR-0012.md.
+   */
+  abrirParaRevisao(id: string, revisorId: string): Document | undefined {
+    const record = this.records.get(id);
+    if (!record) return undefined;
+
+    const nowMs = this.deps.now();
+    const outro = record.presenca;
+    const expirada = outro !== null && nowMs - Date.parse(outro.desde) > PRESENCA_TTL_MS;
+
+    // Someone else's fresh presence is what the caller needs to see, so it is
+    // left in place; ours only takes over once theirs has gone stale.
+    if (outro === null || outro.revisorId === revisorId || expirada) {
+      record.presenca = { revisorId, desde: iso(nowMs) };
+      return { ...project(record, nowMs), revisaoEmAndamento: null };
+    }
+
+    return project(record, nowMs);
+  }
+
+  /**
+   * Saves corrected values. **Does not change the status** — that is the whole
+   * point of splitting correction from confirmation.
+   *
+   * A corrected field keeps the model's `confianca` and flips `origem` to
+   * `humano`: the value became authoritative, not more confident.
+   */
+  corrigirCampos(
+    id: string,
+    versao: number,
+    correcoes: readonly { nome: string; valor: string }[],
+  ): Document | undefined {
+    const record = this.records.get(id);
+    if (!record) return undefined;
+
+    const nowMs = this.deps.now();
+    const atual = project(record, nowMs);
+
+    this.exigirEmConferencia(atual, "Só um documento em conferência aceita correções.");
+    this.exigirVersao(atual, versao);
+
+    const base =
+      record.camposCorrigidos ?? (record.outcome.kind === "sucesso" ? record.outcome.campos : []);
+    const porNome = new Map(correcoes.map((c) => [c.nome, c.valor]));
+
+    record.camposCorrigidos = base.map((campo) => {
+      const novo = porNome.get(campo.nome);
+      if (novo === undefined || novo === campo.valor) return campo;
+      return { ...campo, valor: novo, origem: FieldOrigin.HUMANO };
+    });
+    record.versao += 1;
+    record.atualizadoEmMs = nowMs;
+
+    return project(record, nowMs);
+  }
+
+  /** Closes the review: `em_conferencia` → `pronto`. The only thing that does. */
+  confirmar(id: string, versao: number): Document | undefined {
+    const record = this.records.get(id);
+    if (!record) return undefined;
+
+    const nowMs = this.deps.now();
+    const atual = project(record, nowMs);
+
+    this.exigirEmConferencia(atual, "Só um documento em conferência pode ser confirmado.");
+    this.exigirVersao(atual, versao);
+
+    record.confirmado = true;
+    record.versao += 1;
+    record.atualizadoEmMs = nowMs;
+    record.presenca = null;
+
+    return project(record, nowMs);
+  }
+
+  private exigirEmConferencia(atual: Document, mensagem: string): void {
+    if (atual.status !== DocumentStatus.EM_CONFERENCIA) {
+      throw new ConflictError(ConflictCode.STATUS_INCOMPATIVEL, mensagem, atual);
+    }
+  }
+
+  private exigirVersao(atual: Document, versao: number): void {
+    if (atual.versao !== versao) {
+      throw new ConflictError(
+        ConflictCode.VERSAO_DESATUALIZADA,
+        `O documento foi alterado por outra pessoa. Você tinha a versão ${versao}, a atual é ${atual.versao}.`,
+        atual,
+      );
+    }
+  }
+
   reset(): void {
     this.records.clear();
     this.seq = 0;
@@ -249,6 +406,11 @@ export class DocumentSimulation {
       processandoEmMs: nowMs + this.config.handoffMs,
       concluiEmMs: nowMs + Math.round(durationMs),
       outcome,
+      camposCorrigidos: null,
+      atualizadoEmMs: null,
+      confirmado: false,
+      versao: 1,
+      presenca: null,
     };
   }
 }

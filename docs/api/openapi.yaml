@@ -25,10 +25,26 @@ info:
 
     ## A regra que separa `pronto` de `em_conferencia`
 
-    Um documento vai para `em_conferencia` se, e somente se, **algum** campo
-    extraído tiver `confianca` **menor que 0.75**. Caso contrário vai para
-    `pronto`. Um backend real precisa aplicar exatamente esse limiar, senão a
-    interface e o servidor discordam sobre o que precisa de revisão humana.
+    **Na extração**, um documento vai para `em_conferencia` se algum campo
+    extraído tiver `confianca` menor que 0.75; caso contrário vai para `pronto`.
+    Um backend real precisa aplicar exatamente esse limiar, senão a interface e
+    o servidor discordam sobre o que precisa de revisão humana.
+
+    **Depois disso a regra não se aplica mais.** Corrigir um campo não fecha o
+    documento, por melhor que a correção deixe os números: só
+    `POST /documents/{id}/confirmar` tira um documento de `em_conferencia`.
+    O status é guardado, não derivado. Ver `docs/adr/ADR-0012.md`.
+
+    ## Concorrência
+
+    Duas pessoas podem abrir o mesmo documento. Duas defesas, com papéis
+    diferentes:
+
+    - **`versao`** é a correção: toda escrita manda a versão que leu, e uma
+      versão velha recebe **409** em vez de sobrescrever. O 409 vem com o
+      documento atual em `atual`, para a interface mostrar o que mudou.
+    - **`revisaoEmAndamento`** é o aviso: diz que outra pessoa está com o
+      documento aberto. É informativo e **não bloqueia**.
 
     ## Transporte
 
@@ -131,12 +147,7 @@ paths:
       summary: Recupera um documento
       operationId: obterDocumento
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-          example: doc_0001
+        - $ref: "#/components/parameters/IdDoDocumento"
       responses:
         "200":
           description: O documento.
@@ -151,8 +162,176 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /documents/{id}/revisao:
+    post:
+      tags: [documentos]
+      summary: Abre um documento para conferência
+      description: |
+        Registra que alguém está com o documento aberto e devolve quem mais já
+        estava. POST, não GET, porque grava presença.
+
+        **Nunca recusa.** É aviso, não trava: um lock rígido num sistema sem
+        autenticação e sem encerramento de sessão deixa documentos presos atrás
+        de quem fechou o notebook. Ver `docs/adr/ADR-0012.md`.
+
+        A presença expira em 60s sem ser renovada.
+      operationId: abrirRevisao
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+        - name: x-revisor-id
+          in: header
+          required: true
+          description: |
+            Identificador de quem está revisando. Neste projeto é um id opaco de
+            sessão que o cliente gera. **Um backend real ignora este cabeçalho e
+            usa o usuário autenticado** — confiar nele permitiria se passar por
+            outra pessoa.
+          schema:
+            type: string
+            maxLength: 128
+      responses:
+        "200":
+          description: |
+            O documento. `revisaoEmAndamento` vem preenchido quando outra pessoa
+            chegou antes, e nulo quando o solicitante é o único.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+
+  /documents/{id}/campos:
+    patch:
+      tags: [documentos]
+      summary: Salva campos corrigidos
+      description: |
+        Parcial: só os campos alterados, casados por `nome`.
+
+        **Não muda o status.** Um documento corrigido continua em
+        `em_conferencia` até ser confirmado — é essa separação que permite
+        alguém corrigir metade e outra pessoa concluir.
+
+        Cada campo alterado passa a ter `origem: humano`, e mantém a `confianca`
+        que o modelo tinha declarado.
+      operationId: corrigirCampos
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CorrecaoCamposRequest"
+      responses:
+        "200":
+          description: O documento com os valores corrigidos, ainda em conferência.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "409":
+          $ref: "#/components/responses/Conflito"
+
+  /documents/{id}/confirmar:
+    post:
+      tags: [documentos]
+      summary: Conclui a conferência
+      description: |
+        Move o documento de `em_conferencia` para `pronto`. **A única coisa que
+        faz isso.**
+
+        Válido com ou sem correção anterior: confirmar um documento intocado é
+        como o revisor diz que o modelo acertou.
+      operationId: confirmarRevisao
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ConfirmacaoRequest"
+      responses:
+        "200":
+          description: O documento, agora em `pronto`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Document"
+        "400":
+          $ref: "#/components/responses/ErroDeRequisicao"
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+        "409":
+          $ref: "#/components/responses/Conflito"
+
+  /documents/{id}/arquivo:
+    get:
+      tags: [documentos]
+      summary: Baixa o arquivo original
+      description: |
+        Os bytes enviados, para o visualizador da tela de revisão.
+
+        Um backend real devolveria uma URL assinada de object storage em vez de
+        transmitir a partir do processo da API.
+      operationId: obterArquivo
+      parameters:
+        - $ref: "#/components/parameters/IdDoDocumento"
+      responses:
+        "200":
+          description: O arquivo.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        "404":
+          $ref: "#/components/responses/NaoEncontrado"
+
 components:
+  parameters:
+    IdDoDocumento:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+      example: doc_0001
+
   responses:
+    NaoEncontrado:
+      description: Não existe documento com esse id.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+    Conflito:
+      description: |
+        O documento não aceita a ação no estado em que está. Vem **com o
+        documento atual** em `atual`, para a interface mostrar o que mudou sem
+        precisar de uma segunda requisição.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ConflictError"
+          examples:
+            versaoDesatualizada:
+              value:
+                codigo: versao_desatualizada
+                mensagem: "O documento foi alterado por outra pessoa. Você tinha a versão 1, a atual é 2."
+            statusIncompativel:
+              value:
+                codigo: status_incompativel
+                mensagem: "Só um documento em conferência pode ser confirmado."
+
     ErroDeRequisicao:
       description: Requisição malformada.
       content:
@@ -184,7 +363,7 @@ components:
 
     ExtractedField:
       type: object
-      required: [nome, valor, confianca]
+      required: [nome, valor, confianca, origem]
       properties:
         nome:
           type: string
@@ -201,8 +380,18 @@ components:
           format: float
           minimum: 0
           maximum: 1
-          description: Certeza auto-declarada do modelo. Abaixo de 0.75 força `em_conferencia`.
+          description: |
+            Certeza auto-declarada do modelo. Abaixo de 0.75 força
+            `em_conferencia` **na extração**.
+
+            Nunca é sobrescrita por uma correção: um valor que uma pessoa digitou
+            não ficou mais confiante, ficou autoritativo. Quem diz isso é
+            `origem`. Manter o número do modelo é a trilha de onde ele falhou.
           example: 0.61
+        origem:
+          type: string
+          description: Quem produziu o valor atual.
+          enum: [modelo, humano]
 
     DocumentError:
       type: object
@@ -258,6 +447,33 @@ components:
           oneOf:
             - $ref: "#/components/schemas/DocumentError"
             - type: "null"
+        versao:
+          type: integer
+          minimum: 1
+          description: |
+            Sobe a cada mudança feita pelo servidor. O cliente devolve a versão
+            que leu numa correção ou confirmação; divergência é 409.
+        revisaoEmAndamento:
+          description: |
+            Quem mais está com este documento aberto para conferência.
+            Consultivo — avisa, não bloqueia. Nulo quando ninguém mais está.
+          oneOf:
+            - $ref: "#/components/schemas/ReviewPresence"
+            - type: "null"
+
+    ReviewPresence:
+      type: object
+      required: [revisorId, desde]
+      properties:
+        revisorId:
+          type: string
+          description: |
+            Identificador opaco da sessão. Não há autenticação neste projeto, e
+            por isso o mock não sabe nomear a pessoa; um backend real traria o
+            usuário autenticado.
+        desde:
+          type: string
+          format: date-time
 
     Pagination:
       type: object
@@ -297,6 +513,32 @@ components:
         paginacao:
           $ref: "#/components/schemas/Pagination"
 
+    CorrecaoCamposRequest:
+      type: object
+      required: [versao, campos]
+      properties:
+        versao:
+          type: integer
+          description: A versão que o cliente leu. Divergência é 409.
+        campos:
+          type: array
+          description: Só os campos alterados.
+          items:
+            type: object
+            required: [nome, valor]
+            properties:
+              nome:
+                type: string
+              valor:
+                type: string
+
+    ConfirmacaoRequest:
+      type: object
+      required: [versao]
+      properties:
+        versao:
+          type: integer
+
     ApiError:
       type: object
       required: [codigo, mensagem]
@@ -305,3 +547,15 @@ components:
           type: string
         mensagem:
           type: string
+
+    ConflictError:
+      allOf:
+        - $ref: "#/components/schemas/ApiError"
+        - type: object
+          required: [atual]
+          properties:
+            codigo:
+              type: string
+              enum: [versao_desatualizada, status_incompativel]
+            atual:
+              $ref: "#/components/schemas/Document"

@@ -1,52 +1,58 @@
 import { DocumentErrorCode, type DocumentError } from "@/lib/api/types";
 
 /**
- * Field vocabulary the fake extraction model "reads" off a document. Labels are
- * the ones a law-office triage screen would show, so the review screen has
- * plausible content to correct.
+ * Field vocabulary the fake extraction model "reads" off a document.
+ *
+ * Scoped to **one document type: a Brazilian identity card (RG)**. The review
+ * screen is built against exactly these five fields, per the brief. Supporting
+ * every document type would mean a field schema per type and a review screen
+ * that renders an unknown shape — explicitly out of scope.
  */
 export interface FieldTemplate {
   nome: string;
   valores: readonly string[];
+  /** Machine-read values are shown in the mono face. */
+  mono?: boolean;
 }
 
 export const FIELD_TEMPLATES: readonly FieldTemplate[] = [
   {
-    nome: "Número do processo",
+    nome: "Nome",
     valores: [
-      "0801234-56.2025.8.19.0001",
-      "1004567-89.2024.8.26.0100",
-      "5009876-54.2025.4.03.6100",
+      "Maria Aparecida de Souza",
+      "João Batista Ferreira",
+      "Ana Carolina Rodrigues Lima",
+      "Carlos Eduardo Nogueira",
     ],
   },
   {
-    nome: "Comarca",
-    valores: ["São Paulo — SP", "Rio de Janeiro — RJ", "Belo Horizonte — MG", "Curitiba — PR"],
-  },
-  {
-    nome: "Data de emissão",
-    valores: ["12/03/2025", "04/11/2024", "28/07/2025", "19/01/2026"],
-  },
-  {
-    nome: "Emitente",
+    nome: "Filiação",
     valores: [
-      "Tribunal de Justiça do Estado de São Paulo",
-      "Junta Comercial do Estado do Rio de Janeiro",
-      "Receita Federal do Brasil",
+      "José de Souza e Terezinha de Souza",
+      "Antônio Ferreira e Maria Ferreira",
+      "Paulo Rodrigues Lima e Sônia Rodrigues",
+      "Roberto Nogueira e Cláudia Nogueira",
     ],
   },
   {
-    nome: "CPF/CNPJ",
-    valores: ["123.456.789-09", "12.345.678/0001-95", "987.654.321-00"],
+    nome: "Data de nascimento",
+    valores: ["14/03/1987", "02/11/1964", "28/07/1995", "09/01/1978"],
+    mono: true,
   },
   {
-    nome: "Valor da causa",
-    valores: ["R$ 48.500,00", "R$ 12.300,45", "R$ 250.000,00"],
+    nome: "Número",
+    valores: ["12.345.678-9", "45.678.912-3", "98.765.432-1", "23.456.789-0"],
+    mono: true,
+  },
+  {
+    nome: "Órgão emissor",
+    valores: ["SSP/SP", "DETRAN/RJ", "SSP/MG", "IFP/RJ"],
+    mono: true,
   },
 ];
 
-/** How many fields the model returns per document. */
-export const FIELDS_PER_DOCUMENT = 5;
+/** All five fields of the identity card. */
+export const FIELDS_PER_DOCUMENT = FIELD_TEMPLATES.length;
 
 /**
  * Failure modes. Messages follow the design system's content rule: name the

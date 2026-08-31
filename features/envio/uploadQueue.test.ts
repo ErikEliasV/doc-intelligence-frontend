@@ -48,6 +48,8 @@ function documento(id: string): Document {
     atualizadoEm: "2026-01-15T12:00:00.000Z",
     campos: [],
     erro: null,
+    versao: 1,
+    revisaoEmAndamento: null,
   };
 }
 

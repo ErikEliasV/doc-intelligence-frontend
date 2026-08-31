@@ -1,5 +1,7 @@
 import type {
   ApiError,
+  ConfirmacaoRequest,
+  CorrecaoCamposRequest,
   Document,
   DocumentListResponse,
   DocumentStatus,
@@ -48,9 +50,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     // A refusal should still carry the contract's envelope. When it does not —
     // a proxy error page, a crash — say so plainly instead of surfacing
     // "undefined" to the interface.
-    let erro: ApiError;
+    let erro: ApiError & { atual?: Document };
     try {
-      erro = (await response.json()) as ApiError;
+      erro = (await response.json()) as ApiError & { atual?: Document };
     } catch {
       throw new ApiRequestError(
         "resposta_invalida",
@@ -58,6 +60,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         response.status,
       );
     }
+
+    // A 409 carries the document as it is now. Surfacing it as a plain error
+    // would throw away the one thing the screen needs to explain the conflict.
+    if (response.status === 409 && erro.atual) {
+      throw new ConflictError(erro.codigo, erro.mensagem, erro.atual);
+    }
+
     throw new ApiRequestError(erro.codigo, erro.mensagem, response.status);
   }
 
@@ -100,4 +109,77 @@ export function listarDocumentos(params: ListarDocumentosParams = {}) {
 
 export function obterDocumento(id: string): Promise<Document> {
   return request<Document>(`/documents/${encodeURIComponent(id)}`);
+}
+
+/**
+ * Identifies this browser session to the review endpoints.
+ *
+ * There is no authentication in this project, so the best available answer is
+ * an opaque id that survives reloads in the same tab. Two tabs are two
+ * reviewers, which is exactly what makes the concurrency warning testable by
+ * hand. A real backend takes the authenticated user and ignores this header.
+ */
+const CHAVE_REVISOR = "doc-intelligence:revisor";
+
+export function revisorDestaSessao(): string {
+  try {
+    const existente = sessionStorage.getItem(CHAVE_REVISOR);
+    if (existente) return existente;
+    const novo = crypto.randomUUID();
+    sessionStorage.setItem(CHAVE_REVISOR, novo);
+    return novo;
+  } catch {
+    // Private mode, or storage blocked. A per-load id still identifies this tab
+    // for as long as the page lives, which is all the warning needs.
+    return crypto.randomUUID();
+  }
+}
+
+/** A 409: somebody else changed the document, or it left `em_conferencia`. */
+export class ConflictError extends Error {
+  readonly codigo: string;
+  /** The document as it is now, so the screen can show what changed. */
+  readonly atual: Document;
+
+  constructor(codigo: string, mensagem: string, atual: Document) {
+    super(mensagem);
+    this.name = "ConflictError";
+    this.codigo = codigo;
+    this.atual = atual;
+  }
+}
+
+/** Opens a document for review and reports who else is already in it. */
+export function abrirParaRevisao(id: string): Promise<Document> {
+  return request<Document>(`/documents/${encodeURIComponent(id)}/revisao`, {
+    method: "POST",
+    headers: { "x-revisor-id": revisorDestaSessao() },
+  });
+}
+
+/** Saves corrected values. Does not change the document's status. */
+export function corrigirCampos(
+  id: string,
+  versao: number,
+  campos: readonly { nome: string; valor: string }[],
+): Promise<Document> {
+  return request<Document>(`/documents/${encodeURIComponent(id)}/campos`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ versao, campos } satisfies CorrecaoCamposRequest),
+  });
+}
+
+/** Closes the review: `em_conferencia` → `pronto`. */
+export function confirmarRevisao(id: string, versao: number): Promise<Document> {
+  return request<Document>(`/documents/${encodeURIComponent(id)}/confirmar`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ versao } satisfies ConfirmacaoRequest),
+  });
+}
+
+/** URL of the uploaded bytes, for the review viewer. */
+export function urlDoArquivo(id: string): string {
+  return `${BASE_URL}/documents/${encodeURIComponent(id)}/arquivo`;
 }
