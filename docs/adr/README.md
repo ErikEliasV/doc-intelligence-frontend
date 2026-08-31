@@ -10,3 +10,6 @@ marque o antigo como `Substituído por ADR-000Y`.
 | [0002](ADR-0002.md) | Separação por camadas fora de `app/`               | Aceito |
 | [0003](ADR-0003.md) | Design system vendorizado + ponte para Tailwind v4 | Aceito |
 | [0004](ADR-0004.md) | ESLint + Prettier: divisão de responsabilidade     | Aceito |
+| [0005](ADR-0005.md) | Contrato em OpenAPI, não em markdown               | Aceito |
+| [0006](ADR-0006.md) | Servir o mock por route handlers do Next.js        | Aceito |
+| [0007](ADR-0007.md) | Vitest como runner de testes                       | Aceito |

@@ -1,16 +1,28 @@
 # mocks — dados falsos e simulação de rede
 
-Não existe API real neste projeto. O contrato definido em `lib/` é servido daqui.
+Não existe API real neste projeto. O contrato definido em `lib/api/types.ts` e
+especificado em `docs/api/openapi.yaml` é servido daqui.
 
-Conteúdo previsto:
+```
+simulation/config.ts    taxas e janelas de tempo
+simulation/fixtures.ts  campos e mensagens de erro plausíveis
+simulation/engine.ts    o motor — estado, transições, sorteios
+simulation/*.test.ts    testes do motor
+store.ts                a instância única que os route handlers compartilham
+```
 
-- fixtures de documentos cobrindo os cinco status do design system
-  (`received`, `processing`, `ready`, `review`, `error`)
-- simulação de latência e de falha, com taxa de erro configurável
-- avanço de estado no tempo, para o painel de acompanhamento ter o que mostrar
+O transporte HTTP fica em `app/api/documents/` e é adaptador fino: sem regra de
+negócio. Ver `docs/adr/ADR-0006.md`.
 
-**Regra:** o mock implementa a interface declarada em `lib/`, nunca o contrário.
+**Regra:** o mock implementa o contrato declarado em `lib/`, nunca o contrário.
 Nenhum arquivo fora desta pasta importa fixtures diretamente.
 
-A forma exata (MSW, route handlers em `app/api/`, ou módulo em memória) ainda não
-foi decidida e vira um ADR quando for — ver `AGENTS.md`.
+## O motor não usa timers
+
+O destino de um documento — duração, falhar ou não, confiança de cada campo — é
+sorteado uma vez, no upload. Toda leitura depois é função pura do tempo
+decorrido. Por isso um teste consegue adiantar 40 segundos sem esperar, e ler
+duas vezes devolve exatamente o mesmo documento.
+
+Se for mexer aqui: **não introduza `setTimeout`**. O relógio e o gerador
+aleatório entram por `EngineDeps`, e é isso que mantém os testes determinísticos.
