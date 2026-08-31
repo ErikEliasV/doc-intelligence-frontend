@@ -1,0 +1,16 @@
+/* Animations the design system's components rely on.
+
+   The source ships `ds-indeterminate` inside a `<style>` tag in
+   ProgressBar.jsx, which React renders once per mounted instance. Declared
+   here it exists once for the whole app.
+
+   The design system allows exactly one looping animation — this one. Fades and
+   colour changes only elsewhere: no bounce, no spring, no slide-in. */
+@keyframes ds-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(265%);
+  }
+}
