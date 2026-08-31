@@ -10,7 +10,7 @@ export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from ".
 export { Card, type CardProps, type CardTone } from "./core/Card";
 export { Icon, type IconName, type IconProps } from "./core/Icon";
 export { IconButton, type IconButtonProps, type IconButtonVariant } from "./core/IconButton";
-export { DocumentRow, type DocumentRowProps } from "./documents/DocumentRow";
+export { DocumentRow, GRID_DOCUMENTO, type DocumentRowProps } from "./documents/DocumentRow";
 export { DropZone, type DropZoneProps } from "./documents/DropZone";
 export { FileThumb, type FileThumbProps, type FileThumbState } from "./documents/FileThumb";
 export { ConfidenceMeter, type ConfidenceMeterProps } from "./feedback/ConfidenceMeter";

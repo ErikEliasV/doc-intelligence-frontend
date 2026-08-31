@@ -27,7 +27,20 @@ export interface DocumentRowProps {
   className?: string;
 }
 
-const GRID = "grid grid-cols-[1fr_150px_132px_150px_118px_28px] items-center gap-4";
+/**
+ * The row's column layout, exported so the list header uses the same track
+ * sizes. It was duplicated as a literal in the screen, which meant a change
+ * here silently misaligned the header.
+ *
+ * The status track is 176px because the widest pill — "Em conferência", 170px
+ * with its glyph, padding and the design system's 0.16em eyebrow tracking — did
+ * not fit the 150px the source design system specified. It overflowed by 20px,
+ * ate the whole 16px gap and overlapped the confidence column. The five status
+ * labels are a closed set, so this width is provably enough; adding a status
+ * means re-measuring it.
+ */
+export const GRID_DOCUMENTO =
+  "grid grid-cols-[1fr_150px_132px_176px_118px_28px] items-center gap-4";
 
 export function DocumentRow({
   name,
@@ -65,7 +78,7 @@ export function DocumentRow({
   );
 
   const base = cn(
-    GRID,
+    GRID_DOCUMENTO,
     "h-row w-full border-b border-line-subtle px-4 py-3 text-left transition-control",
     selected && "bg-yellow-100",
     className,

@@ -1,7 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Card, DocumentRow, EmptyState, Icon, Pagination, Tabs } from "@/components";
+import {
+  Card,
+  DocumentRow,
+  EmptyState,
+  GRID_DOCUMENTO,
+  Icon,
+  Pagination,
+  Tabs,
+} from "@/components";
 import { DocumentStatus } from "@/lib/api/types";
 import {
   INTERVALO_BASE_MS,
@@ -81,7 +89,11 @@ export function TrackingScreen() {
       )}
 
       <Card raised className="p-0">
-        <div className="type-eyebrow grid grid-cols-[1fr_150px_132px_150px_118px_28px] items-center gap-4 border-b border-line-strong px-4 py-3 text-muted">
+        {/* Same track sizes as the rows, from the same constant — a literal
+            here would drift out of alignment the moment either changed. */}
+        <div
+          className={`type-eyebrow ${GRID_DOCUMENTO} border-b border-line-strong px-4 py-3 text-muted`}
+        >
           {COLUNAS.map((coluna, i) => (
             <span key={i}>{coluna}</span>
           ))}
