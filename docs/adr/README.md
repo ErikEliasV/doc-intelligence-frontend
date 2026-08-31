@@ -16,3 +16,4 @@ marque o antigo como `Substituído por ADR-000Y`.
 | [0008](ADR-0008.md) | Upload e drag-and-drop sem biblioteca              | Aceito |
 | [0009](ADR-0009.md) | Portar componentes do design system sob demanda    | Aceito |
 | [0010](ADR-0010.md) | Tailwind em toda a interface, sem estilo inline    | Aceito |
+| [0011](ADR-0011.md) | Polling paginado no painel, não WebSocket          | Aceito |

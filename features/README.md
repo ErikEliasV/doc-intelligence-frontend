@@ -5,9 +5,9 @@ componentes que só fazem sentido naquela tela.
 
 Escopo desta entrega (ver `AGENTS.md`):
 
-- `envio/` — envio de documentos
-- `acompanhamento/` — painel de acompanhamento
-- `revisao/` — revisão e correção
+- `envio/` — envio de documentos ✅
+- `acompanhamento/` — painel de acompanhamento ✅
+- `revisao/` — revisão e correção (rota placeholder em `app/revisao/[id]`)
 
 **Pode:** orquestrar estado, chamar o cliente de API de `lib/`, compor
 componentes de `components/`.
