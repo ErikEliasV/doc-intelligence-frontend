@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import {
+  Badge,
+  Button,
   Card,
   DocumentRow,
   EmptyState,
@@ -46,6 +48,7 @@ export function TrackingScreen() {
     carregando,
     erro,
     atualizadoEm,
+    enviadosHoje,
     polling,
     irParaPagina,
     mudarFiltro,
@@ -56,9 +59,31 @@ export function TrackingScreen() {
 
   return (
     <div className="grid max-w-content gap-5">
-      <header className="grid gap-2">
-        <span className="type-eyebrow text-eyebrow">Triagem</span>
-        <h1 className="type-display-2">Painel de acompanhamento</h1>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid gap-2">
+          <span className="type-eyebrow text-eyebrow">Triagem</span>
+          <h1 className="type-display-2">Painel de acompanhamento</h1>
+        </div>
+
+        {/* Ações de header do design system: a contagem do dia e a volta para
+            o envio. A badge só aparece depois da primeira contagem — um "0
+            hoje" enquanto se carrega diria algo falso. */}
+        <div className="flex items-center gap-3">
+          {enviadosHoje !== null && (
+            <Badge tone="neutral">
+              <span className="type-mono">{enviadosHoje}</span>
+              <span className="ml-1">hoje</span>
+            </Badge>
+          )}
+          <Button
+            href="/envio"
+            variant="outline"
+            size="sm"
+            iconLeft={<Icon name="upload-cloud" size={13} />}
+          >
+            Enviar mais
+          </Button>
+        </div>
       </header>
 
       <div className="flex flex-wrap items-center justify-between gap-6">
@@ -88,46 +113,53 @@ export function TrackingScreen() {
         </Card>
       )}
 
-      <Card raised className="p-0">
-        {/* Same track sizes as the rows, from the same constant — a literal
-            here would drift out of alignment the moment either changed. */}
-        <div
-          className={`type-eyebrow ${GRID_DOCUMENTO} border-b border-line-strong px-4 py-3 text-muted`}
-        >
-          {COLUNAS.map((coluna, i) => (
-            <span key={i}>{coluna}</span>
-          ))}
-        </div>
+      {/* `overflow-x-auto` com `min-w-max` por dentro: as colunas do
+          GRID_DOCUMENTO somam 684px de mínimo, contra ~311px úteis num celular.
+          Sem isto a tabela empurra a página inteira e o scroll horizontal vira
+          do documento. Rolar dentro do cartão é o piso; a tabela virar cartões
+          no mobile é outra entrega. Ver docs/adr/ADR-0014.md. */}
+      <Card raised className="overflow-x-auto p-0">
+        <div className="min-w-max">
+          {/* Same track sizes as the rows, from the same constant — a literal
+              here would drift out of alignment the moment either changed. */}
+          <div
+            className={`type-eyebrow ${GRID_DOCUMENTO} border-b border-line-strong px-4 py-3 text-muted`}
+          >
+            {COLUNAS.map((coluna, i) => (
+              <span key={i}>{coluna}</span>
+            ))}
+          </div>
 
-        {documentos.length === 0 ? (
-          <EmptyState
-            icon={filtro === DocumentStatus.ERRO ? "alert-triangle" : "inbox"}
-            title={carregando ? "Carregando" : "Nenhum documento"}
-            body={
-              carregando
-                ? undefined
-                : filtro === "todos"
-                  ? "Nada foi enviado ainda. Comece pelo envio de documentos."
-                  : "Nenhum documento neste status."
-            }
-          />
-        ) : (
-          documentos.map((documento) => (
-            <DocumentRow
-              key={documento.id}
-              name={documento.nome}
-              type={rotuloDoTipo(documento.tipoMime)}
-              receivedAt={formatarRecebidoEm(documento.enviadoEm, agora)}
-              status={documento.status}
-              confidence={confiancaMinima(documento.campos)}
-              onOpen={
-                podeAbrirRevisao(documento.status)
-                  ? () => router.push(`/revisao/${documento.id}`)
-                  : undefined
+          {documentos.length === 0 ? (
+            <EmptyState
+              icon={filtro === DocumentStatus.ERRO ? "alert-triangle" : "inbox"}
+              title={carregando ? "Carregando" : "Nenhum documento"}
+              body={
+                carregando
+                  ? undefined
+                  : filtro === "todos"
+                    ? "Nada foi enviado ainda. Comece pelo envio de documentos."
+                    : "Nenhum documento neste status."
               }
             />
-          ))
-        )}
+          ) : (
+            documentos.map((documento) => (
+              <DocumentRow
+                key={documento.id}
+                name={documento.nome}
+                type={rotuloDoTipo(documento.tipoMime)}
+                receivedAt={formatarRecebidoEm(documento.enviadoEm, agora)}
+                status={documento.status}
+                confidence={confiancaMinima(documento.campos)}
+                onOpen={
+                  podeAbrirRevisao(documento.status)
+                    ? () => router.push(`/revisao/${documento.id}`)
+                    : undefined
+                }
+              />
+            ))
+          )}
+        </div>
       </Card>
 
       {paginacao && paginacao.total > 0 && (

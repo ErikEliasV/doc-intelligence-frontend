@@ -19,13 +19,15 @@ function parsePositiveInt(value: string | null): number | undefined {
 /**
  * GET /api/documents — the tracking panel's poll.
  *
- * Query: `status`, `pagina`, `tamanhoPagina`. Unparseable numbers fall back to
- * the defaults; an unknown `status` is a 400, because silently ignoring it
- * would show the caller a list that does not match what it asked for.
+ * Query: `status`, `desde`, `pagina`, `tamanhoPagina`. Unparseable numbers fall
+ * back to the defaults; an unknown `status` or an unreadable `desde` is a 400,
+ * because silently ignoring either would show the caller a list — or a count —
+ * that does not match what it asked for.
  */
 export async function GET(request: NextRequest): Promise<Response> {
   const params = request.nextUrl.searchParams;
   const status = params.get("status");
+  const desde = params.get("desde");
 
   if (status !== null && !DOCUMENT_STATUSES.includes(status as DocumentStatus)) {
     return badRequest(
@@ -34,9 +36,14 @@ export async function GET(request: NextRequest): Promise<Response> {
     );
   }
 
+  if (desde !== null && Number.isNaN(Date.parse(desde))) {
+    return badRequest("desde_invalido", `Data ilegível em 'desde': ${desde}. Use ISO 8601.`);
+  }
+
   return Response.json(
     getSimulation().list({
       status: (status as DocumentStatus | null) ?? undefined,
+      desde: desde ?? undefined,
       pagina: parsePositiveInt(params.get("pagina")),
       tamanhoPagina: parsePositiveInt(params.get("tamanhoPagina")),
     }),

@@ -1,5 +1,12 @@
 @import "tailwindcss";
-@import "../styles/design-system/index.css";
+/* `layer(base)` is load-bearing, not decoration. `@import "tailwindcss"` declares
+   the cascade layers; anything imported without one stays *unlayered*, and
+   unlayered CSS beats every layer regardless of specificity. Left bare, the
+   design system's `a { text-decoration: underline }` in tokens/base.css won
+   against Tailwind's own `.no-underline`, so a styled link was unstylable.
+   In `base` it sits after Tailwind's preflight and before the utilities, which
+   is exactly where element defaults belong. See docs/adr/ADR-0013.md. */
+@import "../styles/design-system/index.css" layer(base);
 
 /* ---------------------------------------------------------------------------
    Design-system → Tailwind bridge.
@@ -114,6 +121,20 @@
 @utility type-masthead {
   font: var(--type-masthead);
   letter-spacing: var(--tracking-masthead);
+}
+/* The sidebar wordmark. The origin sets it as a one-off (`900 26px/0.9`,
+   -0.03em), three literals the token scale does not carry. Composed from the
+   nearest tokens instead — black weight, display-3 size, tight leading — so the
+   rule holds that no utility here contains a raw value. */
+@utility type-wordmark {
+  font: var(--weight-black) var(--size-display-3) / var(--leading-tight) var(--font-display);
+  letter-spacing: var(--tracking-display);
+}
+/* The same wordmark for the 56px collapsed rail. At the size above, "DOC"
+   measures 48.7px against 40px of usable width and clips. */
+@utility type-wordmark-compact {
+  font: var(--weight-black) var(--size-subtitle) / var(--leading-tight) var(--font-display);
+  letter-spacing: var(--tracking-display);
 }
 @utility type-display-1 {
   font: var(--type-display-1);

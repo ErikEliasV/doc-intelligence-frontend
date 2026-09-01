@@ -1,20 +1,98 @@
 # Architecture Decision Records
 
-Uma decisão por arquivo, numeração sequencial, sem reaproveitar número.
-Um ADR não é apagado quando muda de ideia — escreva um novo que o substitua e
-marque o antigo como `Substituído por ADR-000Y`.
+Dezesseis decisões, do bootstrap ao shell de navegação e ao celular.
 
-| ADR                 | Decisão                                             | Status |
-| ------------------- | --------------------------------------------------- | ------ |
-| [0001](ADR-0001.md) | Baseline da stack: Next.js 16 em vez de 14          | Aceito |
-| [0002](ADR-0002.md) | Separação por camadas fora de `app/`                | Aceito |
-| [0003](ADR-0003.md) | Design system vendorizado + ponte para Tailwind v4  | Aceito |
-| [0004](ADR-0004.md) | ESLint + Prettier: divisão de responsabilidade      | Aceito |
-| [0005](ADR-0005.md) | Contrato em OpenAPI, não em markdown                | Aceito |
-| [0006](ADR-0006.md) | Servir o mock por route handlers do Next.js         | Aceito |
-| [0007](ADR-0007.md) | Vitest como runner de testes                        | Aceito |
-| [0008](ADR-0008.md) | Upload e drag-and-drop sem biblioteca               | Aceito |
-| [0009](ADR-0009.md) | Portar componentes do design system sob demanda     | Aceito |
-| [0010](ADR-0010.md) | Tailwind em toda a interface, sem estilo inline     | Aceito |
-| [0011](ADR-0011.md) | Polling paginado no painel, não WebSocket           | Aceito |
-| [0012](ADR-0012.md) | Correção e confirmação separadas, com lock otimista | Aceito |
+Uma decisão por arquivo, numeração sequencial, sem reaproveitar número. Um ADR
+não é apagado quando muda de ideia — escreva um novo que o substitua e marque o
+antigo. Ver `AGENTS.md`, regra 2.
+
+## Índice
+
+### Fundação
+
+| ADR                 | Decisão                | Por quê, em uma linha                                                            | Status |
+| ------------------- | ---------------------- | -------------------------------------------------------------------------------- | ------ |
+| [0001](ADR-0001.md) | Next.js 16, não 14     | O pedido era "14+"; a instalada é 16.3.3, e a margem muda como se escreve código | Aceito |
+| [0002](ADR-0002.md) | Camadas fora de `app/` | Toda pasta dentro de `app/` vira rota; fora, a arquitetura aparece na raiz       | Aceito |
+| [0004](ADR-0004.md) | ESLint + Prettier      | Prettier decide forma, ESLint decide correção, zero sobreposição                 | Aceito |
+| [0007](ADR-0007.md) | Vitest                 | Lê TypeScript sem configuração e serve para o teste de componente que vem depois | Aceito |
+
+### Design system
+
+| ADR                 | Decisão                                      | Por quê, em uma linha                                                                                   | Status                                                                                    |
+| ------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| [0003](ADR-0003.md) | Tokens vendorizados + fontes por `next/font` | Cópia literal para re-sincronizar; fontes auto-hospedadas em vez de CDN                                 | Aceito — §3 substituída pela [0010](ADR-0010.md)                                          |
+| [0009](ADR-0009.md) | Componentes portados sob demanda             | Portar 17 componentes não usados seria código não exercitado                                            | Aceito — prop surface revista pela [0010](ADR-0010.md), emendada pela [0013](ADR-0013.md) |
+| [0010](ADR-0010.md) | Tailwind em toda a interface                 | `@utility` do Tailwind v4 resolve o shorthand `font:` e a colisão de namespace que me levaram ao inline | Aceito                                                                                    |
+| [0015](ADR-0015.md) | `Button` com `href`                          | O ADR-0009 disse "entra quando houver botão-link"; as ações de header são esse momento                  | Aceito                                                                                    |
+
+### Contrato e mock
+
+| ADR                 | Decisão                                             | Por quê, em uma linha                                                                     | Status                                                     |
+| ------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| [0005](ADR-0005.md) | Contrato em OpenAPI                                 | Um backend gera stub a partir dela; de markdown, gera leitura                             | Aceito — regra de status emendada pela [0012](ADR-0012.md) |
+| [0006](ADR-0006.md) | Mock por route handlers                             | Zero dependências, e o contrato vira executável por `curl`                                | Aceito                                                     |
+| [0012](ADR-0012.md) | Correção e confirmação separadas, com lock otimista | Salvar não conclui; `versao` evita perder trabalho, presença evita fazer trabalho perdido | Aceito                                                     |
+| [0016](ADR-0016.md) | `desde` em `GET /documents`                         | `total` com `tamanhoPagina=1` conta a janela sem transferir a janela                      | Aceito                                                     |
+
+### Telas
+
+| ADR                 | Decisão                             | Por quê, em uma linha                                                                | Status |
+| ------------------- | ----------------------------------- | ------------------------------------------------------------------------------------ | ------ |
+| [0008](ADR-0008.md) | Upload sem biblioteca               | O que a `react-dropzone` adiciona é sobretudo validação de tipo, que o escopo proíbe | Aceito |
+| [0011](ADR-0011.md) | Polling paginado, não WebSocket     | No pico há ~2,5 documentos mudando de estado por vez; um socket não paga             | Aceito |
+| [0013](ADR-0013.md) | Shell lateral, colapsado na revisão | A barra cheia deixaria a coluna de campos com 272px a 1024px; o trilho devolve 180px | Aceito |
+| [0014](ADR-0014.md) | Barra inferior no celular           | 236px comem 63% de um telefone, e o design system não tem nada abaixo de 1440px      | Aceito |
+
+## As quatro decisões que mais moldaram o resultado
+
+Se alguém for ler só quatro:
+
+1. **[0006](ADR-0006.md) — o motor não usa timers.** O destino de um documento é
+   sorteado uma vez, no envio; toda leitura depois é função pura do tempo
+   decorrido. É o que torna a leitura idempotente e o que permite ao teste
+   adiantar 40 segundos sem esperar 40 segundos.
+2. **[0010](ADR-0010.md) — `@utility` em vez de estilo inline.** Eu tinha
+   registrado no ADR-0003 que os papéis de tipo do design system eram
+   inexpressáveis em Tailwind. Estavam expressáveis; eu é que não tinha
+   procurado.
+3. **[0011](ADR-0011.md) — polling no escopo da página.** O payload é constante
+   independente do acervo, e o custo se concentra onde a informação muda.
+4. **[0012](ADR-0012.md) — status guardado, não derivado.** A decisão de separar
+   salvar de confirmar invalidou a regra "se e somente se" que a
+   [0005](ADR-0005.md) tinha escrito. Um `PATCH` fecharia o documento sozinho.
+
+## Onde as decisões se contradisseram
+
+Cinco emendas, todas registradas no lugar em vez de reescritas por cima:
+
+- **0003 §3 → 0010.** O prefixo `ds-` era desnecessário nas cores, e o
+  `@utility` resolvia a colisão que o motivou.
+- **0009 (prop surface) → 0010.** `style` deu lugar a `className`; `Card` perdeu
+  a prop `padding`.
+- **0005 (regra de status) → 0012.** O limiar de 0.75 passa a valer só na
+  extração.
+- **0009 (prop surface, de novo) → 0013.** A promessa "prop surface inalterada"
+  valia para os sete primeiros. `SidebarNav` é o oitavo e navega por `href` com
+  `next/link`, não por `value`/`onChange` — o primeiro contrato que diverge da
+  origem, trocado por ctrl-clique, copiar link e prefetch.
+- **0009 (desvio nº 3) → 0015.** Aquele ADR previu: "`Button` não tem a prop
+  `as`… entra quando houver botão-link". As ações de header são o botão-link, e
+  a previsão foi cobrada — com uma união discriminada em `href`, não com um `as`
+  polimórfico.
+
+## Dívidas registradas, ainda abertas
+
+Cada uma tem o ADR que a documenta:
+
+| Dívida                                                | Onde                | Impacto                                                       |
+| ----------------------------------------------------- | ------------------- | ------------------------------------------------------------- |
+| Paginação por offset desliza no pico                  | [0011](ADR-0011.md) | Alto — na página 2 dá para ver um documento duas vezes        |
+| Sem endpoint de resumo (abas sem contagem)            | [0011](ADR-0011.md) | Médio — não se vê quantos aguardam conferência sem paginar    |
+| Sem trilha de auditoria de quem corrigiu              | [0012](ADR-0012.md) | Alto para escritório de advocacia                             |
+| Sem sincronia entre `openapi.yaml` e os tipos         | [0005](ADR-0005.md) | Médio — os dois podem divergir em silêncio                    |
+| Estado do mock por processo, some no restart          | [0006](ADR-0006.md) | Esperado num mock                                             |
+| Sem miniatura de PDF                                  | [0008](ADR-0008.md) | Baixo                                                         |
+| `SidebarNav` não é mais comparável com a origem       | [0013](ADR-0013.md) | Baixo — um arquivo dos oito sai do diff linha a linha         |
+| Tabela do painel só rola no celular, não vira cartões | [0014](ADR-0014.md) | Médio — 684px de mínimo contra ~311px úteis                   |
+| Contagem do dia dobra as requisições do poll          | [0016](ADR-0016.md) | Baixo — payload de um documento; o endpoint de resumo resolve |

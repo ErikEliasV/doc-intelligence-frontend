@@ -125,6 +125,23 @@ function formatarHora(data: Date): string {
   return `${hh}:${mm}`;
 }
 
+/**
+ * Midnight of `agora`, in the viewer's own timezone, as ISO 8601 UTC.
+ *
+ * Feeds the `desde` filter behind the panel's "N hoje" badge. "Hoje" is the
+ * question a person in the office is asking, so the day boundary is theirs and
+ * not UTC's — in Brazil the two differ by three hours, which would put a whole
+ * evening's uploads in the wrong day.
+ *
+ * `agora` is a parameter for the same reason `formatarRecebidoEm` takes one:
+ * a function that reads the clock itself cannot be tested.
+ */
+export function inicioDoDia(agora: Date): string {
+  const meiaNoite = new Date(agora);
+  meiaNoite.setHours(0, 0, 0, 0);
+  return meiaNoite.toISOString();
+}
+
 /** MIME type as a short label for the list's "Tipo" column. */
 export function rotuloDoTipo(tipoMime: string): string {
   if (tipoMime === "application/pdf") return "PDF";

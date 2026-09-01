@@ -6,9 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function AcompanhamentoPage() {
-  return (
-    <main className="p-gutter flex-1">
-      <TrackingScreen />
-    </main>
-  );
+  return <TrackingScreen />;
 }

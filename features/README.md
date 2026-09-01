@@ -9,6 +9,12 @@ Escopo desta entrega (ver `AGENTS.md`):
 - `acompanhamento/` — painel de acompanhamento ✅
 - `revisao/` — revisão e correção ✅
 
+E uma pasta que não é tela:
+
+- `shell/` — a moldura de navegação que as três compartilham. Fica aqui, e não
+  em `components/`, porque conhece rotas — e `components/` não pode. Ver
+  `docs/adr/ADR-0013.md`.
+
 **Pode:** orquestrar estado, chamar o cliente de API de `lib/`, compor
 componentes de `components/`.
 

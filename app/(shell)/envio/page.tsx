@@ -6,9 +6,5 @@ export const metadata: Metadata = {
 };
 
 export default function EnvioPage() {
-  return (
-    <main className="p-gutter flex-1">
-      <UploadScreen />
-    </main>
-  );
+  return <UploadScreen />;
 }

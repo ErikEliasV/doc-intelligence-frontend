@@ -30,9 +30,22 @@ export function UploadScreen() {
 
   return (
     <div className="grid max-w-content gap-6">
-      <header className="grid gap-2">
-        <span className="type-eyebrow text-eyebrow">Triagem</span>
-        <h1 className="type-display-2">Envio de documentos</h1>
+      {/* Ação de header do design system: daqui o caminho natural é o painel,
+          e a nota no rodapé da tela já promete que a leitura acontece lá. */}
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="grid gap-2">
+          <span className="type-eyebrow text-eyebrow">Triagem</span>
+          <h1 className="type-display-2">Envio de documentos</h1>
+        </div>
+
+        <Button
+          href="/acompanhamento"
+          variant="inverse"
+          size="sm"
+          iconRight={<Icon name="arrow-right" size={13} />}
+        >
+          Ir ao painel
+        </Button>
       </header>
 
       <DropZone onFiles={adicionarArquivos} />

@@ -35,19 +35,45 @@ export function ReviewScreen({ id }: { id: string }) {
 
   const [ativo, setAtivo] = useState<string | null>(null);
 
+  /**
+   * The way back. Revisão has no item in the sidebar — it is reached from a row
+   * of the panel, so a nav entry would have no id to point at — and this is what
+   * replaces it. Rendered in every state, including the error one: a document
+   * that failed to load is exactly when someone needs the exit.
+   */
+  const trilha = (
+    <nav aria-label="Trilha de navegação">
+      <Link
+        href="/acompanhamento"
+        className="type-body-sm inline-flex items-center gap-2 text-muted no-underline hover:text-display"
+      >
+        <Icon name="chevron-left" size={14} />
+        Painel de acompanhamento
+      </Link>
+    </nav>
+  );
+
   if (carregando) {
-    return <p className="type-body text-muted">Carregando documento.</p>;
+    return (
+      <div className="grid gap-6">
+        {trilha}
+        <p className="type-body text-muted">Carregando documento.</p>
+      </div>
+    );
   }
 
   if (erro || !documento) {
     return (
-      <Card
-        raised={false}
-        className="flex items-center gap-3 border-red-600 px-4 py-3 text-red-600"
-      >
-        <Icon name="alert-triangle" size={16} />
-        <p className="type-body-sm">{erro ?? "Documento não encontrado."}</p>
-      </Card>
+      <div className="grid gap-6">
+        {trilha}
+        <Card
+          raised={false}
+          className="flex items-center gap-3 border-red-600 px-4 py-3 text-red-600"
+        >
+          <Icon name="alert-triangle" size={16} />
+          <p className="type-body-sm">{erro ?? "Documento não encontrado."}</p>
+        </Card>
+      </div>
     );
   }
 
@@ -58,6 +84,8 @@ export function ReviewScreen({ id }: { id: string }) {
 
   return (
     <div className="grid gap-6">
+      {trilha}
+
       <header className="grid gap-2">
         <span className="type-eyebrow text-eyebrow">Triagem</span>
         <h1 className="type-display-2">Revisão e correção</h1>
