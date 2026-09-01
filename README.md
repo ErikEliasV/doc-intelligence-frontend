@@ -58,6 +58,14 @@ Não há hooks nem comandos customizados. `.claude/settings.local.json` está no
 permissões locais), não configuração do projeto; o `.gitignore` diz isso na
 linha.
 
+Os **27 prompts** que construíram o projeto estão em
+[`prompts/`](prompts/README.md), na íntegra e em ordem, com os erros de digitação
+preservados. No mesmo lugar,
+[**onde o agente errou**](prompts/README.md#onde-o-agente-errou): as quatro vezes
+em que foi preciso corrigir o rumo, como cada uma foi percebida e o que mudou
+depois — incluindo a vez em que ele escreveu uma justificativa técnica falsa
+dentro de um ADR.
+
 ## Comandos
 
 | Comando                | O que faz                       |
@@ -100,7 +108,7 @@ app/  →  features/  →  lib/  +  components/
 | `lib/`                  | Contratos, tipos, cliente de API — a fronteira com o back-end |
 | `mocks/`                | Simulação, fixtures, documentos de exemplo                    |
 | `styles/design-system/` | Tokens vendorizados. **Não edite `tokens/` à mão**            |
-| `docs/adr/`             | 16 decisões de arquitetura                                    |
+| `docs/adr/`             | 17 decisões de arquitetura                                    |
 | `prompts/`              | Todos os prompts do projeto, na íntegra                       |
 
 `features/shell/` é a única pasta de `features/` que não é uma tela: é a moldura
@@ -161,7 +169,7 @@ interface mudaria além da URL base.
 |                         | Hoje                                          | Num sistema real                                 |
 | ----------------------- | --------------------------------------------- | ------------------------------------------------ |
 | **Extração**            | Sorteio: 15% erro, 30% baixa confiança, 5–40s | Modelo de verdade                                |
-| **Campos**              | 5 fixos de RG, valores de uma lista           | Schema por tipo de documento                     |
+| **Campos**              | 5 fixos de RG, valores de uma lista           | Os mesmos quatro atributos, vindos do modelo     |
 | **Persistência**        | `Map` em memória, some no restart             | Banco; `versao` vira coluna                      |
 | **Arquivos**            | Bytes no processo                             | Object storage + URL assinada                    |
 | **Identidade**          | Id opaco de sessão num header                 | Usuário autenticado; o header seria **ignorado** |
@@ -170,6 +178,15 @@ interface mudaria além da URL base.
 
 **Não é mock:** as três telas, o design system, o cliente tipado, a paginação, o
 polling, e o comportamento de conflito como o cliente o enxerga.
+
+**O que muda quando o modelo trocar de versão: nada aqui.** O fato (f) do
+enunciado avisa que o modelo será trocado e que os prompts vão mudar mais de uma
+vez no primeiro ano. Por isso `ExtractedField` não é tipado por tipo de
+documento — é `{ nome, valor, confianca, origem }`, e a interface renderiza o que
+chegar, na ordem em que chegar. Um prompt novo que extraia "data de expedição"
+aparece na tela de revisão, editável, sem uma linha de front-end. O que isso
+custa — sem validação por campo, sem layout por tipo, e um acoplamento residual
+que sobrou no cliente — está no [ADR-0017](docs/adr/ADR-0017.md).
 
 O mock vive em `mocks/` e é servido por route handlers do Next
 ([ADR-0006](docs/adr/ADR-0006.md)) — o contrato é executável por `curl`:
@@ -234,7 +251,7 @@ de módulos do runner. Foi a verificação manual que achou. Está registrado em
 
 ## Decisões
 
-16 ADRs em [`docs/adr/`](docs/adr/README.md), com índice, as cinco emendas onde
+17 ADRs em [`docs/adr/`](docs/adr/README.md), com índice, as cinco emendas onde
 uma decisão contradisse outra, e o quadro das dívidas ainda abertas.
 
 As quatro que mais moldaram o resultado:
@@ -253,6 +270,10 @@ E as quatro da navegação e do celular:
 [0014](docs/adr/ADR-0014.md) (barra inferior no mobile),
 [0015](docs/adr/ADR-0015.md) (`Button` com `href`) e
 [0016](docs/adr/ADR-0016.md) (`desde` no contrato de listagem).
+
+Mais uma que não se vê na tela e sustenta as outras:
+[0017](docs/adr/ADR-0017.md) — campo sem tipo por documento, para que a troca de
+versão do modelo não passe pelo front-end.
 
 ## Limitações conhecidas
 

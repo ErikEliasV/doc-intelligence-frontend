@@ -400,11 +400,28 @@ components:
 
     ExtractedField:
       type: object
+      description: |
+        Um valor que a extração leu do documento.
+
+        **Não há schema por tipo de documento, de propósito.** Um RG e um
+        contrato devolvem a mesma estrutura: uma lista ordenada destes quatro
+        atributos. O modelo do fornecedor será trocado de versão e os prompts
+        vão mudar mais de uma vez no primeiro ano — tipar os campos poria o
+        cliente no caminho crítico de cada uma dessas mudanças.
+
+        A ordem da lista é responsabilidade do servidor: é a ordem em que a
+        interface renderiza.
+
+        Ver `docs/adr/ADR-0017.md`, inclusive para o que essa escolha custa.
       required: [nome, valor, confianca, origem]
       properties:
         nome:
           type: string
-          description: Rótulo exibido na interface. Único dentro de um documento.
+          description: |
+            Rótulo exibido na interface, em português. Único dentro de um
+            documento, e **também a chave** com que uma correção identifica o
+            campo em `PATCH /documents/{id}/campos`. Renomear um rótulo entre
+            versões de prompt quebra correções em trânsito.
           example: Número do processo
         valor:
           type: string

@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Dezesseis decisões, do bootstrap ao shell de navegação e ao celular.
+Dezessete decisões, do bootstrap ao shell de navegação e ao celular.
 
 Uma decisão por arquivo, numeração sequencial, sem reaproveitar número. Um ADR
 não é apagado quando muda de ideia — escreva um novo que o substitua e marque o
@@ -34,6 +34,7 @@ antigo. Ver `AGENTS.md`, regra 2.
 | [0006](ADR-0006.md) | Mock por route handlers                             | Zero dependências, e o contrato vira executável por `curl`                                | Aceito                                                     |
 | [0012](ADR-0012.md) | Correção e confirmação separadas, com lock otimista | Salvar não conclui; `versao` evita perder trabalho, presença evita fazer trabalho perdido | Aceito                                                     |
 | [0016](ADR-0016.md) | `desde` em `GET /documents`                         | `total` com `tamanhoPagina=1` conta a janela sem transferir a janela                      | Aceito                                                     |
+| [0017](ADR-0017.md) | Campo sem tipo por documento                        | O prompt muda mais de uma vez por ano; tipar põe o front-end no caminho de cada mudança   | Aceito                                                     |
 
 ### Telas
 
@@ -96,6 +97,7 @@ Cada uma tem o ADR que a documenta:
 | `SidebarNav` não é mais comparável com a origem       | [0013](ADR-0013.md) | Baixo — um arquivo dos oito sai do diff linha a linha         |
 | Tabela do painel só rola no celular, não vira cartões | [0014](ADR-0014.md) | Médio — 684px de mínimo contra ~311px úteis                   |
 | Contagem do dia dobra as requisições do poll          | [0016](ADR-0016.md) | Baixo — payload de um documento; o endpoint de resumo resolve |
+| Lista `MONO` fixa nomes de campo no cliente           | [0017](ADR-0017.md) | Baixo — renomear o campo tira a fonte mono em silêncio        |
 
 ## O que foi decidido e não virou ADR
 
@@ -109,5 +111,5 @@ carrega, e aqui não há código a carregar. Estão registrados no
 | **(c)** o mesmo documento chega mais de uma vez | Hash SHA-256 no envio, `possivelDuplicataDe` apontando para o original, sem bloquear o envio |
 | **(d)** o conteúdo é dado pessoal sensível      | Mascarar em listagem por critério de reidentificação; número revelado por ação explícita     |
 
-Quando forem implementados, cada um vira um ADR numerado a partir do **0017** —
+Quando forem implementados, cada um vira um ADR numerado a partir do **0018** —
 sem reaproveitar número, como a regra 2 do `AGENTS.md` manda.
