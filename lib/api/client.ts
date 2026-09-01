@@ -91,6 +91,13 @@ export function enviarDocumentos(arquivos: readonly File[]): Promise<UploadRespo
 
 export interface ListarDocumentosParams {
   status?: DocumentStatus;
+  /**
+   * ISO 8601. Only documents with `enviadoEm >= desde`, inclusive.
+   *
+   * Pair it with `tamanhoPagina: 1` to count a window without downloading it —
+   * `paginacao.total` is the answer. See docs/adr/ADR-0016.md.
+   */
+  desde?: string;
   pagina?: number;
   tamanhoPagina?: number;
 }
@@ -98,6 +105,7 @@ export interface ListarDocumentosParams {
 export function listarDocumentos(params: ListarDocumentosParams = {}) {
   const query = new URLSearchParams();
   if (params.status) query.set("status", params.status);
+  if (params.desde) query.set("desde", params.desde);
   if (params.pagina !== undefined) query.set("pagina", String(params.pagina));
   if (params.tamanhoPagina !== undefined) {
     query.set("tamanhoPagina", String(params.tamanhoPagina));

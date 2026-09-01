@@ -3,8 +3,11 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    // Stays `node`. The component tests here render to an HTML string with
+    // `react-dom/server`, which needs no DOM — so no jsdom, and no Testing
+    // Library. See docs/adr/ADR-0013.md.
     environment: "node",
-    include: ["**/*.test.ts"],
+    include: ["**/*.test.ts", "**/*.test.tsx"],
     exclude: ["node_modules/**", ".next/**"],
   },
   resolve: {

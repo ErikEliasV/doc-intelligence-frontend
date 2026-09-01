@@ -6,6 +6,7 @@ import {
   confiancaMinima,
   decidirPolling,
   formatarRecebidoEm,
+  inicioDoDia,
   limitarPagina,
   podeAbrirRevisao,
   rotuloDoTipo,
@@ -214,5 +215,44 @@ describe("rotuloDoTipo", () => {
 
   it("tem rótulo para o que não reconhece", () => {
     expect(rotuloDoTipo("application/octet-stream")).toBe("Arquivo");
+  });
+});
+
+/**
+ * Alimenta a badge "N hoje" do painel: o corte vai como `desde` para
+ * `GET /documents`. Ver docs/adr/ADR-0016.md.
+ */
+describe("inicioDoDia", () => {
+  it("zera hora, minuto, segundo e milissegundo no fuso de quem olha", () => {
+    const corte = new Date(inicioDoDia(new Date(2026, 7, 31, 14, 32, 9, 501)));
+
+    expect(corte.getHours()).toBe(0);
+    expect(corte.getMinutes()).toBe(0);
+    expect(corte.getSeconds()).toBe(0);
+    expect(corte.getMilliseconds()).toBe(0);
+  });
+
+  it("mantém o dia local", () => {
+    const agora = new Date(2026, 7, 31, 23, 59, 59);
+    const corte = new Date(inicioDoDia(agora));
+
+    expect(corte.getFullYear()).toBe(2026);
+    expect(corte.getMonth()).toBe(7);
+    expect(corte.getDate()).toBe(31);
+  });
+
+  /** Vai no fio como ISO 8601 UTC, que é o que o contrato aceita em `desde`. */
+  it("devolve ISO 8601", () => {
+    expect(inicioDoDia(new Date(2026, 7, 31, 12))).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/,
+    );
+  });
+
+  it("um documento da meia-noite em ponto conta como de hoje", () => {
+    const meiaNoite = new Date(2026, 7, 31, 0, 0, 0, 0);
+    const corte = inicioDoDia(new Date(2026, 7, 31, 9));
+
+    // O filtro do motor é `>=`, então empatar com o corte é estar dentro.
+    expect(meiaNoite.getTime()).toBe(Date.parse(corte));
   });
 });

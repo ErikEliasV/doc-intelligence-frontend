@@ -33,6 +33,13 @@ export interface UploadInput {
 
 export interface ListParams {
   status?: DocumentStatus;
+  /**
+   * ISO 8601. Keeps only documents with `enviadoEm >= desde`, inclusive.
+   *
+   * Exists so a caller can *count* a window without downloading it: ask for
+   * `tamanhoPagina: 1` and read `paginacao.total`. See docs/adr/ADR-0016.md.
+   */
+  desde?: string;
   pagina?: number;
   tamanhoPagina?: number;
 }
@@ -251,9 +258,14 @@ export class DocumentSimulation {
       .sort((a, b) => b.enviadoEmMs - a.enviadoEmMs || b.seq - a.seq)
       .map((record) => project(record, nowMs));
 
-    const filtered = params.status
-      ? all.filter((documento) => documento.status === params.status)
-      : all;
+    // Both filters run before pagination, so `total` is the size of what was
+    // asked for rather than of the store.
+    const desdeMs = params.desde === undefined ? null : Date.parse(params.desde);
+    const filtered = all.filter(
+      (documento) =>
+        (params.status === undefined || documento.status === params.status) &&
+        (desdeMs === null || Date.parse(documento.enviadoEm) >= desdeMs),
+    );
 
     const tamanhoPagina = Math.min(
       Math.max(1, Math.floor(params.tamanhoPagina ?? DEFAULT_PAGE_SIZE)),

@@ -344,6 +344,69 @@ describe("list", () => {
   });
 });
 
+/**
+ * `desde` exists so the panel can count "documentos enviados hoje" without
+ * pulling the whole collection down to count it. See docs/adr/ADR-0016.md.
+ */
+describe("list — filtro desde", () => {
+  const HORA = 60 * 60 * SECOND;
+
+  it("descarta o que chegou antes do corte", () => {
+    const { sim, clock } = build(ALWAYS_HIGH_CONFIDENCE);
+    sim.upload([file("ontem.pdf")]);
+    clock.advance(2 * HORA);
+    const corte = new Date(clock.now()).toISOString();
+    sim.upload([file("agora.pdf")]);
+
+    expect(sim.list({ desde: corte }).documentos.map((d) => d.nome)).toEqual(["agora.pdf"]);
+  });
+
+  /** O documento enviado exatamente no instante do corte conta como dentro. */
+  it("inclui o limite", () => {
+    const { sim, clock } = build(ALWAYS_HIGH_CONFIDENCE);
+    const corte = new Date(clock.now()).toISOString();
+    sim.upload([file("no-limite.pdf")]);
+
+    expect(sim.list({ desde: corte }).paginacao.total).toBe(1);
+  });
+
+  it("conta o conjunto filtrado, para o total servir de contagem", () => {
+    const { sim, clock } = build(ALWAYS_HIGH_CONFIDENCE);
+    sim.upload(Array.from({ length: 4 }, (_, i) => file(`velho${i}.pdf`)));
+    clock.advance(HORA);
+    const corte = new Date(clock.now()).toISOString();
+    sim.upload(Array.from({ length: 3 }, (_, i) => file(`novo${i}.pdf`)));
+
+    // Uma página de tamanho 1 é o que o painel pede: ele quer o total, não os
+    // documentos.
+    const pagina = sim.list({ desde: corte, tamanhoPagina: 1 });
+
+    expect(pagina.paginacao.total).toBe(3);
+    expect(pagina.documentos).toHaveLength(1);
+  });
+
+  it("combina com o filtro de status", () => {
+    const { sim, clock } = build(ALWAYS_ERROR);
+    sim.upload([file("velho.pdf")]);
+    clock.advance(HORA);
+    const corte = new Date(clock.now()).toISOString();
+    sim.upload([file("novo.pdf")]);
+    clock.advance(DEFAULT_SIMULATION_CONFIG.maxProcessingMs);
+
+    expect(sim.list({ desde: corte, status: DocumentStatus.ERRO }).paginacao.total).toBe(1);
+    expect(sim.list({ desde: corte, status: DocumentStatus.PRONTO }).paginacao.total).toBe(0);
+  });
+
+  it("sem desde, devolve tudo", () => {
+    const { sim, clock } = build(ALWAYS_HIGH_CONFIDENCE);
+    sim.upload([file("a.pdf")]);
+    clock.advance(HORA);
+    sim.upload([file("b.pdf")]);
+
+    expect(sim.list().paginacao.total).toBe(2);
+  });
+});
+
 describe("get", () => {
   it("returns undefined for an unknown id", () => {
     const { sim } = build(ALWAYS_HIGH_CONFIDENCE);

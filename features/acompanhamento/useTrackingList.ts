@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { ApiRequestError, NetworkError, listarDocumentos } from "@/lib/api/client";
 import type { DocumentListResponse, DocumentStatus } from "@/lib/api/types";
-import { TAMANHO_PAGINA, decidirPolling, limitarPagina } from "./trackingList";
+import { TAMANHO_PAGINA, decidirPolling, inicioDoDia, limitarPagina } from "./trackingList";
 
 export type Filtro = "todos" | DocumentStatus;
 
@@ -25,6 +25,7 @@ export function useTrackingList() {
   const [erro, setErro] = useState<string | null>(null);
   const [falhasSeguidas, setFalhasSeguidas] = useState(0);
   const [atualizadoEm, setAtualizadoEm] = useState<Date | null>(null);
+  const [enviadosHoje, setEnviadosHoje] = useState<number | null>(null);
 
   const visivel = useVisibilidadeDaAba();
 
@@ -56,6 +57,27 @@ export function useTrackingList() {
     }
   }, []);
 
+  /**
+   * The "N hoje" badge, in its own request and deliberately non-fatal.
+   *
+   * `tamanhoPagina: 1` means the answer is `paginacao.total` and the payload is
+   * one document, whatever the day's volume — the same property ADR-0011 wanted
+   * from the page poll. A badge is not worth failing the screen over, so a
+   * rejection here leaves the last known number on screen instead of turning
+   * the panel into an error state.
+   */
+  const contarEnviadosHoje = useCallback(async () => {
+    try {
+      const { paginacao } = await listarDocumentos({
+        desde: inicioDoDia(new Date()),
+        tamanhoPagina: 1,
+      });
+      setEnviadosHoje(paginacao.total);
+    } catch {
+      // Deixa o número anterior de pé.
+    }
+  }, []);
+
   // Covers all three reasons to load: first render, a changed query, and coming
   // back to a tab that was in the background.
   //
@@ -68,7 +90,8 @@ export function useTrackingList() {
     if (!visivel) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void buscar(pagina, filtro);
-  }, [buscar, pagina, filtro, visivel]);
+    void contarEnviadosHoje();
+  }, [buscar, contarEnviadosHoje, pagina, filtro, visivel]);
 
   const documentos = dados?.documentos ?? [];
   const decisao = decidirPolling({ documentos, visivel, falhasSeguidas });
@@ -76,9 +99,12 @@ export function useTrackingList() {
   // Re-armed after every refresh, because `dados` changes each time.
   useEffect(() => {
     if (!decisao.ativo) return;
-    const t = setTimeout(() => void buscar(pagina, filtro), decisao.intervaloMs);
+    const t = setTimeout(() => {
+      void buscar(pagina, filtro);
+      void contarEnviadosHoje();
+    }, decisao.intervaloMs);
     return () => clearTimeout(t);
-  }, [buscar, pagina, filtro, decisao.ativo, decisao.intervaloMs, dados]);
+  }, [buscar, contarEnviadosHoje, pagina, filtro, decisao.ativo, decisao.intervaloMs, dados]);
 
   return {
     documentos,
@@ -89,13 +115,18 @@ export function useTrackingList() {
     carregando: dados === null && erro === null,
     erro,
     atualizadoEm,
+    /** Null until the first count arrives; the badge stays hidden meanwhile. */
+    enviadosHoje,
     polling: decisao,
     irParaPagina: (p: number) => setPagina(limitarPagina(p, dados?.paginacao.totalPaginas ?? 1)),
     mudarFiltro: (novo: Filtro) => {
       setFiltro(novo);
       setPagina(1);
     },
-    atualizarAgora: () => void buscar(pagina, filtro),
+    atualizarAgora: () => {
+      void buscar(pagina, filtro);
+      void contarEnviadosHoje();
+    },
   };
 }
 
