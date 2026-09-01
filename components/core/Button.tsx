@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
+import Link from "next/link";
 import { cn } from "../cn";
 
 /**
@@ -12,6 +13,11 @@ import { cn } from "../cn";
  * the button mid-press.
  *
  * No state means no `"use client"`: this renders wherever its parent does.
+ *
+ * **`href` renders `next/link` instead of `<button>`.** The origin spells this
+ * `as="a"`; docs/adr/ADR-0009.md left it out with "entra quando houver
+ * botão-link", and the header actions are that moment. See
+ * docs/adr/ADR-0015.md.
  */
 const BASE =
   "inline-flex items-center justify-center gap-2 type-button border border-line-strong " +
@@ -38,14 +44,29 @@ const VARIANTS = {
 export type ButtonVariant = keyof typeof VARIANTS;
 export type ButtonSize = keyof typeof SIZES;
 
-export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonComum {
   variant?: ButtonVariant;
   size?: ButtonSize;
   iconLeft?: ReactNode;
   iconRight?: ReactNode;
   full?: boolean;
+  className?: string;
   children?: ReactNode;
 }
+
+/**
+ * Discriminated on `href`, not a general polymorphic `as`. That is deliberate:
+ * ADR-0009 recorded that a correct polymorphic component costs more than it
+ * looks, and the whole need here is one extra element type. `href?: never` on
+ * the button side is what makes the narrowing below work, and what stops
+ * `disabled` from being offered on a link.
+ */
+type ButtonComoBotao = ButtonComum & ButtonHTMLAttributes<HTMLButtonElement> & { href?: never };
+
+type ButtonComoLink = ButtonComum &
+  Omit<AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & { href: string };
+
+export type ButtonProps = ButtonComoBotao | ButtonComoLink;
 
 export function Button({
   variant = "primary",
@@ -57,14 +78,29 @@ export function Button({
   children,
   ...rest
 }: ButtonProps) {
-  return (
-    <button
-      className={cn(BASE, SIZES[size], VARIANTS[variant], full && "w-full", className)}
-      {...rest}
-    >
+  const classes = cn(BASE, SIZES[size], VARIANTS[variant], full && "w-full", className);
+  const conteudo = (
+    <>
       {iconLeft}
       {children}
       {iconRight}
+    </>
+  );
+
+  if (rest.href !== undefined) {
+    const { href, ...ancora } = rest;
+    return (
+      <Link href={href} className={classes} {...ancora}>
+        {conteudo}
+      </Link>
+    );
+  }
+
+  // Narrowed to the button half of the union. `href` is `undefined` here, and
+  // React drops an undefined attribute, so spreading it is harmless.
+  return (
+    <button className={classes} {...rest}>
+      {conteudo}
     </button>
   );
 }

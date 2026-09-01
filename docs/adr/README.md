@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Treze decisões, do bootstrap ao shell de navegação.
+Dezesseis decisões, do bootstrap ao shell de navegação e ao celular.
 
 Uma decisão por arquivo, numeração sequencial, sem reaproveitar número. Um ADR
 não é apagado quando muda de ideia — escreva um novo que o substitua e marque o
@@ -24,6 +24,7 @@ antigo. Ver `AGENTS.md`, regra 2.
 | [0003](ADR-0003.md) | Tokens vendorizados + fontes por `next/font` | Cópia literal para re-sincronizar; fontes auto-hospedadas em vez de CDN                                 | Aceito — §3 substituída pela [0010](ADR-0010.md)                                          |
 | [0009](ADR-0009.md) | Componentes portados sob demanda             | Portar 17 componentes não usados seria código não exercitado                                            | Aceito — prop surface revista pela [0010](ADR-0010.md), emendada pela [0013](ADR-0013.md) |
 | [0010](ADR-0010.md) | Tailwind em toda a interface                 | `@utility` do Tailwind v4 resolve o shorthand `font:` e a colisão de namespace que me levaram ao inline | Aceito                                                                                    |
+| [0015](ADR-0015.md) | `Button` com `href`                          | O ADR-0009 disse "entra quando houver botão-link"; as ações de header são esse momento                  | Aceito                                                                                    |
 
 ### Contrato e mock
 
@@ -32,6 +33,7 @@ antigo. Ver `AGENTS.md`, regra 2.
 | [0005](ADR-0005.md) | Contrato em OpenAPI                                 | Um backend gera stub a partir dela; de markdown, gera leitura                             | Aceito — regra de status emendada pela [0012](ADR-0012.md) |
 | [0006](ADR-0006.md) | Mock por route handlers                             | Zero dependências, e o contrato vira executável por `curl`                                | Aceito                                                     |
 | [0012](ADR-0012.md) | Correção e confirmação separadas, com lock otimista | Salvar não conclui; `versao` evita perder trabalho, presença evita fazer trabalho perdido | Aceito                                                     |
+| [0016](ADR-0016.md) | `desde` em `GET /documents`                         | `total` com `tamanhoPagina=1` conta a janela sem transferir a janela                      | Aceito                                                     |
 
 ### Telas
 
@@ -40,6 +42,7 @@ antigo. Ver `AGENTS.md`, regra 2.
 | [0008](ADR-0008.md) | Upload sem biblioteca               | O que a `react-dropzone` adiciona é sobretudo validação de tipo, que o escopo proíbe | Aceito |
 | [0011](ADR-0011.md) | Polling paginado, não WebSocket     | No pico há ~2,5 documentos mudando de estado por vez; um socket não paga             | Aceito |
 | [0013](ADR-0013.md) | Shell lateral, colapsado na revisão | A barra cheia deixaria a coluna de campos com 272px a 1024px; o trilho devolve 180px | Aceito |
+| [0014](ADR-0014.md) | Barra inferior no celular           | 236px comem 63% de um telefone, e o design system não tem nada abaixo de 1440px      | Aceito |
 
 ## As quatro decisões que mais moldaram o resultado
 
@@ -61,7 +64,7 @@ Se alguém for ler só quatro:
 
 ## Onde as decisões se contradisseram
 
-Quatro emendas, todas registradas no lugar em vez de reescritas por cima:
+Cinco emendas, todas registradas no lugar em vez de reescritas por cima:
 
 - **0003 §3 → 0010.** O prefixo `ds-` era desnecessário nas cores, e o
   `@utility` resolvia a colisão que o motivou.
@@ -73,17 +76,23 @@ Quatro emendas, todas registradas no lugar em vez de reescritas por cima:
   valia para os sete primeiros. `SidebarNav` é o oitavo e navega por `href` com
   `next/link`, não por `value`/`onChange` — o primeiro contrato que diverge da
   origem, trocado por ctrl-clique, copiar link e prefetch.
+- **0009 (desvio nº 3) → 0015.** Aquele ADR previu: "`Button` não tem a prop
+  `as`… entra quando houver botão-link". As ações de header são o botão-link, e
+  a previsão foi cobrada — com uma união discriminada em `href`, não com um `as`
+  polimórfico.
 
 ## Dívidas registradas, ainda abertas
 
 Cada uma tem o ADR que a documenta:
 
-| Dívida                                          | Onde                | Impacto                                                    |
-| ----------------------------------------------- | ------------------- | ---------------------------------------------------------- |
-| Paginação por offset desliza no pico            | [0011](ADR-0011.md) | Alto — na página 2 dá para ver um documento duas vezes     |
-| Sem endpoint de resumo (abas sem contagem)      | [0011](ADR-0011.md) | Médio — não se vê quantos aguardam conferência sem paginar |
-| Sem trilha de auditoria de quem corrigiu        | [0012](ADR-0012.md) | Alto para escritório de advocacia                          |
-| Sem sincronia entre `openapi.yaml` e os tipos   | [0005](ADR-0005.md) | Médio — os dois podem divergir em silêncio                 |
-| Estado do mock por processo, some no restart    | [0006](ADR-0006.md) | Esperado num mock                                          |
-| Sem miniatura de PDF                            | [0008](ADR-0008.md) | Baixo                                                      |
-| `SidebarNav` não é mais comparável com a origem | [0013](ADR-0013.md) | Baixo — um arquivo dos oito sai do diff linha a linha      |
+| Dívida                                                | Onde                | Impacto                                                       |
+| ----------------------------------------------------- | ------------------- | ------------------------------------------------------------- |
+| Paginação por offset desliza no pico                  | [0011](ADR-0011.md) | Alto — na página 2 dá para ver um documento duas vezes        |
+| Sem endpoint de resumo (abas sem contagem)            | [0011](ADR-0011.md) | Médio — não se vê quantos aguardam conferência sem paginar    |
+| Sem trilha de auditoria de quem corrigiu              | [0012](ADR-0012.md) | Alto para escritório de advocacia                             |
+| Sem sincronia entre `openapi.yaml` e os tipos         | [0005](ADR-0005.md) | Médio — os dois podem divergir em silêncio                    |
+| Estado do mock por processo, some no restart          | [0006](ADR-0006.md) | Esperado num mock                                             |
+| Sem miniatura de PDF                                  | [0008](ADR-0008.md) | Baixo                                                         |
+| `SidebarNav` não é mais comparável com a origem       | [0013](ADR-0013.md) | Baixo — um arquivo dos oito sai do diff linha a linha         |
+| Tabela do painel só rola no celular, não vira cartões | [0014](ADR-0014.md) | Médio — 684px de mínimo contra ~311px úteis                   |
+| Contagem do dia dobra as requisições do poll          | [0016](ADR-0016.md) | Baixo — payload de um documento; o endpoint de resumo resolve |

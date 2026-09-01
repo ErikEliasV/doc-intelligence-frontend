@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { SidebarNav } from "@/components";
+import { BottomNav, SidebarNav } from "@/components";
 import { ITENS_NAV, deveColapsar, itemAtivo } from "./navegacao";
 
 /**
@@ -20,18 +20,26 @@ import { ITENS_NAV, deveColapsar, itemAtivo } from "./navegacao";
  */
 export function Shell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const ativo = itemAtivo(pathname)?.href ?? null;
 
   return (
     <div className="flex flex-1">
       <SidebarNav
         items={ITENS_NAV}
-        activeHref={itemAtivo(pathname)?.href ?? null}
+        activeHref={ativo}
         collapsed={deveColapsar(pathname)}
         className="sticky top-0 h-screen self-start"
       />
+
       {/* `min-w-0` so a wide table inside can shrink instead of pushing the
-          rail off-screen. */}
-      <main className="p-gutter min-w-0 flex-1">{children}</main>
+          rail off-screen. The bottom padding clears the fixed mobile bar —
+          64px against its 56px, plus whatever inset the device reserves — and
+          reverts to the plain gutter once the bar is gone. */}
+      <main className="p-gutter min-w-0 flex-1 pb-[calc(var(--space-16)+env(safe-area-inset-bottom))] md:pb-[var(--gutter-page)]">
+        {children}
+      </main>
+
+      <BottomNav items={ITENS_NAV} activeHref={ativo} />
     </div>
   );
 }

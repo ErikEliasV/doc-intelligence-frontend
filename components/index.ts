@@ -21,6 +21,7 @@ export { EmptyState, type EmptyStateProps } from "./feedback/EmptyState";
 export { ProgressBar, type ProgressBarProps } from "./feedback/ProgressBar";
 export { StatusPill, rotuloDoStatus, type StatusPillProps } from "./feedback/StatusPill";
 export { Toast, type ToastProps, type ToastTone } from "./feedback/Toast";
+export { BottomNav, type BottomNavProps } from "./navigation/BottomNav";
 export { Pagination, type PaginationProps } from "./navigation/Pagination";
 export { SidebarNav, type SidebarNavItem, type SidebarNavProps } from "./navigation/SidebarNav";
 export { Tabs, type TabItem, type TabsProps } from "./navigation/Tabs";

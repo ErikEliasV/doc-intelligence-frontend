@@ -297,6 +297,42 @@ describe("duas pessoas na mesma conferência, via HTTP", () => {
   });
 });
 
+/**
+ * O painel usa isto para a badge "N hoje": pede uma página de tamanho 1 e lê
+ * `paginacao.total`. Ver docs/adr/ADR-0016.md.
+ */
+describe("contagem por janela de tempo, via HTTP", () => {
+  it("conta a janela sem transferir a janela", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(SORTEIO.caminhoFeliz);
+    await enviarArquivo("rg-frente-fake.png");
+    await enviarArquivo("rg-verso-fake.png");
+
+    const corte = new Date(T0).toISOString();
+    const pagina = await listarPor(`desde=${encodeURIComponent(corte)}&tamanhoPagina=1`);
+
+    expect(pagina.paginacao.total).toBe(2);
+    expect(pagina.documentos).toHaveLength(1);
+  });
+
+  it("exclui o que chegou antes do corte", async () => {
+    vi.spyOn(Math, "random").mockReturnValue(SORTEIO.caminhoFeliz);
+    await enviarArquivo("rg-frente-fake.png");
+
+    vi.setSystemTime(T0 + 60_000);
+    const corte = new Date(T0 + 30_000).toISOString();
+    await enviarArquivo("rg-verso-fake.png");
+
+    expect((await listarPor(`desde=${encodeURIComponent(corte)}`)).paginacao.total).toBe(1);
+  });
+
+  it("um desde ilegível é 400, não um filtro ignorado em silêncio", async () => {
+    const resposta = await listar(new NextRequest(`${BASE}?desde=ontem`));
+
+    expect(resposta.status).toBe(400);
+    expect(((await resposta.json()) as { codigo: string }).codigo).toBe("desde_invalido");
+  });
+});
+
 // --- auxiliares que passam pelo HTTP ---------------------------------------
 
 async function abrirParaRevisao(id: string, revisorId: string): Promise<Document> {

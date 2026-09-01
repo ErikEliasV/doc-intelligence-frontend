@@ -73,6 +73,19 @@ describe("SidebarNav — rota ativa", () => {
     expect(ativa.atual).toBe(true);
   });
 
+  /**
+   * Abaixo de `md` quem navega é a `BottomNav`. `hidden` é `display:none`, que
+   * tira o elemento também da árvore de acessibilidade — é o que permite às
+   * duas barras compartilharem o mesmo `aria-label` sem duplicar navegação
+   * para quem usa leitor de tela. Ver docs/adr/ADR-0014.md.
+   */
+  it("só aparece a partir do breakpoint md", () => {
+    const html = renderToStaticMarkup(<SidebarNav items={ITENS} activeHref="/envio" />);
+
+    expect(html).toContain("hidden");
+    expect(html).toContain("md:flex");
+  });
+
   it("renderiza uma âncora por item, não um botão", () => {
     const html = renderToStaticMarkup(<SidebarNav items={ITENS} activeHref="/envio" />);
 

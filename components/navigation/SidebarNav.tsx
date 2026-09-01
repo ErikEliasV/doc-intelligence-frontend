@@ -50,7 +50,10 @@ export function SidebarNav({
     <nav
       aria-label="Navegação principal"
       className={cn(
-        "flex shrink-0 grow-0 flex-col border-r border-line-strong bg-inverse text-on-inverse",
+        // Hidden below `md`, where `BottomNav` takes over. `display:none` also
+        // removes it from the accessibility tree, which is what lets both bars
+        // carry the same label without announcing navigation twice.
+        "hidden shrink-0 grow-0 flex-col border-r border-line-strong bg-inverse text-on-inverse md:flex",
         collapsed ? "w-14" : "w-[var(--sidebar-width)]",
         className,
       )}

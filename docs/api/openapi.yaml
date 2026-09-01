@@ -64,11 +64,18 @@ paths:
       tags: [documentos]
       summary: Lista documentos
       description: |
-        Ordenado do mais recente para o mais antigo. O filtro é aplicado antes
-        da paginação, então `paginacao.total` reflete o conjunto filtrado.
+        Ordenado do mais recente para o mais antigo. Os filtros são aplicados
+        antes da paginação, então `paginacao.total` reflete o conjunto filtrado.
 
         Uma `pagina` fora do intervalo é reduzida à última página válida em vez
         de devolver lista vazia.
+
+        ## Contar sem baixar
+
+        Como `paginacao.total` já respeita os filtros, combinar `desde` com
+        `tamanhoPagina=1` devolve a contagem de uma janela sem transferir a
+        janela. É como o painel produz "N documentos enviados hoje" com um
+        payload de um documento. Ver `docs/adr/ADR-0016.md`.
       operationId: listarDocumentos
       parameters:
         - name: status
@@ -77,6 +84,20 @@ paths:
           description: Devolve só documentos neste status.
           schema:
             $ref: "#/components/schemas/DocumentStatus"
+        - name: desde
+          in: query
+          required: false
+          description: |
+            Devolve só documentos com `enviadoEm` **maior ou igual** a este
+            instante. O limite é inclusivo.
+
+            Uma data ilegível é `400` (`desde_invalido`), não um filtro
+            ignorado em silêncio: quem pediu uma contagem de hoje e recebeu a
+            do acervo inteiro não tem como perceber.
+          schema:
+            type: string
+            format: date-time
+          example: "2026-08-31T03:00:00.000Z"
         - name: pagina
           in: query
           required: false
