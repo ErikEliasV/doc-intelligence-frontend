@@ -24,8 +24,9 @@ Abre em `http://localhost:3000` e redireciona para `/envio`.
 1. Em **`/envio`**, arraste os arquivos de `mocks/exemplos/` — são cinco
    documentos fictícios prontos para isso.
 2. Clique em **Confirmar envio**. Cada arquivo mostra seu próprio status.
-3. Vá para **`/acompanhamento`**. Os documentos aparecem em `processando` e a
-   lista se atualiza sozinha a cada 15s.
+3. Clique em **Acompanhamento** na barra lateral, ou no botão **Ir ao painel** no
+   header. Os documentos aparecem em `processando` e a lista se atualiza sozinha
+   a cada 15s. A badge **"N hoje"** no header conta o que chegou no dia.
 4. Em 5 a 40 segundos eles assentam. Alguns caem em **`em_conferência`**
    (~30%), alguns em **`erro`** (~15%).
 5. Clique numa linha `em conferência` — só essas abrem. Corrija um campo,
@@ -38,6 +39,25 @@ Abre em `http://localhost:3000` e redireciona para `/envio`.
 Para ver o aviso de **duas pessoas no mesmo documento**, abra a mesma URL de
 revisão em duas abas.
 
+Para ver o **layout de celular**, estreite a janela abaixo de 768px: a lateral dá
+lugar a uma barra fixa no rodapé.
+
+## Configuração do agente, versionada
+
+O projeto foi construído com assistência de agente, e o que guiou essa
+construção está no repositório, não na máquina de quem rodou:
+
+| Arquivo                                       | O que é                                         |
+| --------------------------------------------- | ----------------------------------------------- |
+| `AGENTS.md`                                   | Instruções permanentes: escopo, camadas, regras |
+| `CLAUDE.md`                                   | Aponta para o `AGENTS.md`                       |
+| `.claude/skills/karpathy-guidelines/SKILL.md` | Única skill de projeto configurada              |
+
+Não há hooks nem comandos customizados. `.claude/settings.local.json` está no
+`.gitignore` de propósito — são preferências por desenvolvedor (modelo, tema,
+permissões locais), não configuração do projeto; o `.gitignore` diz isso na
+linha.
+
 ## Comandos
 
 | Comando                | O que faz                       |
@@ -45,7 +65,7 @@ revisão em duas abas.
 | `npm run dev`          | Servidor de desenvolvimento     |
 | `npm run build`        | Build de produção               |
 | `npm start`            | Serve o build                   |
-| `npm test`             | Testes (97)                     |
+| `npm test`             | Testes (137)                    |
 | `npm run test:watch`   | Testes em watch                 |
 | `npm run lint`         | ESLint                          |
 | `npm run typecheck`    | `next typegen` + `tsc --noEmit` |
@@ -80,8 +100,12 @@ app/  →  features/  →  lib/  +  components/
 | `lib/`                  | Contratos, tipos, cliente de API — a fronteira com o back-end |
 | `mocks/`                | Simulação, fixtures, documentos de exemplo                    |
 | `styles/design-system/` | Tokens vendorizados. **Não edite `tokens/` à mão**            |
-| `docs/adr/`             | 12 decisões de arquitetura                                    |
+| `docs/adr/`             | 16 decisões de arquitetura                                    |
 | `prompts/`              | Todos os prompts do projeto, na íntegra                       |
+
+`features/shell/` é a única pasta de `features/` que não é uma tela: é a moldura
+de navegação que as três compartilham. Fica ali, e não em `components/`, porque
+conhece rotas — e `components/` não pode ([ADR-0013](docs/adr/ADR-0013.md)).
 
 Cada pasta tem um `README.md` com a sua fronteira.
 
@@ -95,6 +119,37 @@ Cada pasta tem um `README.md` com a sua fronteira.
 
 Fora de escopo por decisão registrada em `AGENTS.md`: fila de conferência
 completa e busca textual.
+
+### Navegação
+
+As três compartilham um shell: barra lateral fixa de 236px, com a rota ativa
+destacada por cor **e** por `aria-current` — o destaque não pode ser só a cor.
+`SidebarNav` foi portado do design system sob demanda, com um desvio de contrato
+registrado: navega por `href` com `next/link`, não por `value`/`onChange` com
+`<button>`, o que devolve ctrl-clique, copiar link e prefetch
+([ADR-0013](docs/adr/ADR-0013.md), [ADR-0015](docs/adr/ADR-0015.md)).
+
+A revisão **não tem item próprio na barra** — é alcançada por uma linha do
+painel, e um item apontando para um id inexistente seria link morto. O caminho de
+volta é um breadcrumb no topo da tela, presente também nos estados de carregando
+e de erro.
+
+Cada tela tem as ações de header do design system: **"Ir ao painel"** no envio, e
+no painel a contagem **"N hoje"** ao lado de **"Enviar mais"**.
+
+### Responsividade
+
+Abaixo de 768px a lateral some e entra uma barra fixa no rodapé. Não é porte: o
+kit da origem é um viewport de 1440×900 com `overflow:hidden` e não tem
+tratamento mobile nenhum, então a barra inferior foi desenhada aqui
+([ADR-0014](docs/adr/ADR-0014.md)). Barra em vez de gaveta porque são dois
+destinos — uma gaveta cobraria estado, scrim, `Esc`, fechar ao navegar e
+armadilha de foco para esconder dois links.
+
+Na revisão, entre 1024px e 1280px, a lateral cheia deixaria a coluna de campos
+com 272px, onde `"José de Souza e Terezinha de Souza"` não cabe. Ali ela colapsa
+para um trilho de ícones de 56px, e a coluna volta a 452px. Números medidos no
+DOM, não estimados ([ADR-0013](docs/adr/ADR-0013.md)).
 
 ## Mockado vs. real
 
@@ -126,7 +181,7 @@ curl "localhost:3000/api/documents?status=em_conferencia"
 
 ## O que foi escolhido testar, e por quê
 
-São **97 testes**, e a escolha do que testar seguiu uma regra: **testar o que
+São **137 testes**, e a escolha do que testar seguiu uma regra: **testar o que
 quebra em silêncio**, não o que é visível.
 
 A maior parte cobre a **lógica pura** — o motor da simulação, a fila de envio, as
@@ -148,13 +203,28 @@ conferência, correção, confirmação, volta ao painel como pronto. Ele pega o
 teste de unidade não pega: status HTTP, corpo malformado, e o contrato como o
 navegador o vê.
 
-**O que deliberadamente não tem teste automatizado: a UI.** Renderização de
-componente teria exigido jsdom e Testing Library — duas dependências — para
-verificar principalmente aparência, que é o que testes de componente cobrem pior.
-No lugar disso, cada tela foi verificada no navegador, com medição do DOM quando
-o problema era de layout. Foi assim que dois bugs de sobreposição foram
-encontrados e corrigidos com número, não com impressão. A troca é consciente e
-tem um custo real: uma regressão visual não quebra o build.
+**Há testes de componente, e eles não testam aparência.** Entraram com o shell de
+navegação e custaram **zero dependência nova**: `renderToStaticMarkup`, de
+`react-dom/server`, que já é dependência de runtime — o Vitest segue em
+`environment: "node"`, sem jsdom e sem Testing Library. Para a pergunta que estes
+testes fazem, asserção sobre a string HTML é mais estrita que uma query por
+texto: ela enxerga `aria-current`, `aria-label` e `title`, que uma busca por
+texto visível não vê.
+
+O que eles fixam é semântica e estrutura, não pixels: que só a rota ativa carrega
+`aria-current="page"` **e** a classe de destaque; que `Button` com `href`
+renderiza `<a>` e sem `href` renderiza `<button>`; que a barra lateral some no
+breakpoint em que a inferior aparece. Um deles trava uma regra de escopo do
+`AGENTS.md`: falha se busca ou fila de conferência voltarem para a navegação.
+
+**O que continua sem teste automatizado é a aparência.** Cada tela foi verificada
+no navegador, com medição do DOM quando o problema era de layout. Foi assim que
+foram achados — com número, não com impressão — o recorte do wordmark no trilho
+colapsado (48,7px de texto para 40px úteis) e o fato de que o design system era
+importado sem camada de cascata, o que fazia `a { text-decoration: underline }`
+vencer o `.no-underline` do Tailwind e deixava os links da barra inestilizáveis.
+Nenhum teste de string pegaria os dois. A troca é consciente e tem custo real:
+uma regressão visual não quebra o build.
 
 Um caso ilustra o limite dessa escolha: um conflito que deveria devolver 409
 devolveu 500 no servidor de desenvolvimento, e **nenhum teste pegaria** — era
@@ -164,7 +234,7 @@ de módulos do runner. Foi a verificação manual que achou. Está registrado em
 
 ## Decisões
 
-12 ADRs em [`docs/adr/`](docs/adr/README.md), com índice, as três emendas onde
+16 ADRs em [`docs/adr/`](docs/adr/README.md), com índice, as cinco emendas onde
 uma decisão contradisse outra, e o quadro das dívidas ainda abertas.
 
 As quatro que mais moldaram o resultado:
@@ -178,6 +248,12 @@ As quatro que mais moldaram o resultado:
 - **[0012](docs/adr/ADR-0012.md)** — status guardado, não derivado: só a
   confirmação explícita fecha um documento.
 
+E as quatro da navegação e do celular:
+[0013](docs/adr/ADR-0013.md) (shell lateral, colapsado na revisão),
+[0014](docs/adr/ADR-0014.md) (barra inferior no mobile),
+[0015](docs/adr/ADR-0015.md) (`Button` com `href`) e
+[0016](docs/adr/ADR-0016.md) (`desde` no contrato de listagem).
+
 ## Limitações conhecidas
 
 Todas registradas, nenhuma escondida. As três que mais pesam:
@@ -189,6 +265,34 @@ Todas registradas, nenhuma escondida. As três que mais pesam:
    vê quantos aguardam conferência sem paginar ([ADR-0011](docs/adr/ADR-0011.md)).
 3. **Sem trilha de auditoria.** `origem` diz que um humano corrigiu, não quem nem
    qual era o valor antes ([ADR-0012](docs/adr/ADR-0012.md)).
+4. **No celular, a tabela do painel rola em vez de virar cartões.** São 684px de
+   largura mínima contra ~311px úteis num telefone; o `overflow-x-auto` é o piso,
+   não o alvo ([ADR-0014](docs/adr/ADR-0014.md)).
+
+## O que não foi entregue
+
+O enunciado descreve dois problemas que **foram analisados e têm solução
+desenhada, mas não implementada**. Estão aqui porque omiti-los seria pior do que
+admiti-los:
+
+| Fato do enunciado                               | Estado                      | O que foi decidido                                                                                         |
+| ----------------------------------------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **(c)** o mesmo documento chega mais de uma vez | Desenhado, não implementado | Hash SHA-256 do conteúdo no envio, campo `possivelDuplicataDe` apontando para o original, **sem bloquear** |
+| **(d)** o conteúdo é dado pessoal sensível      | Desenhado, não implementado | Mascarar em listagem por critério de reidentificação; número do documento revelado por ação explícita      |
+
+Os dois desenhos chegaram a design fechado e pararam antes da implementação. Duas
+notas de honestidade sobre eles:
+
+- **Hash exato só pega reenvio do mesmo arquivo.** A mesma carteira fotografada
+  de novo gera bytes diferentes e passa direto. Cobrir isso exigiria hash
+  perceptual de imagem, que é visão computacional e outra ordem de custo.
+- **Mascaramento de exibição não é segurança de dado.** Não protege trânsito nem
+  repouso; o valor cheio continua saindo do backend em todo `GET`. Uma
+  implementação real precisa do campo não sair sem necessidade, log de acesso a
+  quem revelou o quê, cifra em repouso e controle de acesso.
+
+Fora de escopo desde o início, por `AGENTS.md`: fila de conferência completa e
+busca textual.
 
 ## Stack
 

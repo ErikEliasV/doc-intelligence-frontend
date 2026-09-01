@@ -50,6 +50,22 @@ info:
 
     Não há WebSocket. O acompanhamento é por polling em `GET /documents`.
 
+    ## O que este contrato ainda não diz
+
+    Dois campos foram desenhados e **deliberadamente não especificados**, porque
+    não há implementação por trás deles e um contrato que promete o que ninguém
+    serve é pior que um contrato honesto:
+
+    - **`Document.possivelDuplicataDe`** — id do documento original quando o
+      hash SHA-256 do conteúdo coincide com o de um envio anterior. Marcaria
+      sem bloquear; a decisão de descartar é humana.
+    - **Sensibilidade de campo.** O mascaramento decidido é de *exibição*, no
+      cliente, e por isso não muda `ExtractedField`. Um backend real iria além:
+      não serializar o campo onde ele não é necessário, e registrar quem o
+      revelou.
+
+    Ver "O que não foi entregue" no `README.md` da raiz.
+
 servers:
   - url: /api
     description: Mesma origem da aplicação.

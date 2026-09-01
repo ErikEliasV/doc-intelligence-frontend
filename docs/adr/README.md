@@ -96,3 +96,18 @@ Cada uma tem o ADR que a documenta:
 | `SidebarNav` não é mais comparável com a origem       | [0013](ADR-0013.md) | Baixo — um arquivo dos oito sai do diff linha a linha         |
 | Tabela do painel só rola no celular, não vira cartões | [0014](ADR-0014.md) | Médio — 684px de mínimo contra ~311px úteis                   |
 | Contagem do dia dobra as requisições do poll          | [0016](ADR-0016.md) | Baixo — payload de um documento; o endpoint de resumo resolve |
+
+## O que foi decidido e não virou ADR
+
+Dois problemas do enunciado chegaram a **design fechado e não foram
+implementados**, então não têm ADR: um ADR registra uma decisão que o código
+carrega, e aqui não há código a carregar. Estão registrados no
+[`README.md`](../../README.md) da raiz, na seção "O que não foi entregue":
+
+| Fato do enunciado                               | O que foi decidido                                                                           |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| **(c)** o mesmo documento chega mais de uma vez | Hash SHA-256 no envio, `possivelDuplicataDe` apontando para o original, sem bloquear o envio |
+| **(d)** o conteúdo é dado pessoal sensível      | Mascarar em listagem por critério de reidentificação; número revelado por ação explícita     |
+
+Quando forem implementados, cada um vira um ADR numerado a partir do **0017** —
+sem reaproveitar número, como a regra 2 do `AGENTS.md` manda.

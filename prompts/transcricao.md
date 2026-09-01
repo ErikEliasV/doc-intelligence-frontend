@@ -319,3 +319,209 @@ Faça:
 5. Não adicione nenhuma funcionalidade nova aqui — só documentação e
    finalização.
 ```
+
+---
+
+## 17 — Detecção de duplicidade
+
+```
+Crie a branch feature/duplicate-detection a partir de develop.
+
+Contexto: o documento da avaliação registra que o mesmo documento físico
+costuma chegar mais de uma vez — o cliente reenvia por insegurança, o
+atendimento reenvia por precaução (fato c). Isso ficou registrado como
+pendência desde a Demanda 1 e ainda não foi tratado.
+
+Escopo:
+1. No upload, calcule um hash de conteúdo (ex: SHA-256) de cada arquivo
+   recebido.
+2. Ao registrar um novo documento, compare o hash contra os documentos já
+   existentes (qualquer status). Se houver coincidência exata, marque o
+   novo documento com um campo possivelDuplicataDe apontando para o id do
+   documento original, sem bloquear o envio.
+3. Na tela de envio, mostre um aviso não bloqueante quando um arquivo for
+   identificado como possível duplicata ("este arquivo já foi enviado
+   antes, em [data/hora]").
+4. No painel de acompanhamento, sinalize visualmente documentos marcados
+   como possível duplicata (um selo discreto), sem removê-los da lista — a
+   decisão de descartar ou não é humana.
+
+Restrições explícitas:
+- Não implemente detecção por similaridade de conteúdo (mesma foto tirada
+  duas vezes, ângulos diferentes) — exigiria visão computacional e está
+  fora do escopo. Documente essa limitação: hash exato só captura reenvio
+  do mesmo arquivo, não do mesmo documento físico fotografado de novo.
+- Não bloqueie ou rejeite automaticamente um envio duplicado — a
+  conferência humana decide o que fazer.
+
+Atualize types.ts e o openapi.yaml com o novo campo, e registre a decisão
+inteira (hash exato, não bloquear, limitação da abordagem) em um ADR novo.
+
+Escreva testes: mesmo arquivo enviado duas vezes é marcado; arquivos
+diferentes não são; a marcação não impede o processamento normal.
+
+Ao final, deixe explícito no relatório que esta é uma solução parcial para
+o fato (c), e o que ficaria pendente numa versão futura (ex: hash
+perceptual de imagem).
+```
+
+---
+
+## 18 — Mascaramento de dado sensível
+
+```
+Crie a branch feature/sensitive-data-masking a partir de develop.
+
+Contexto: o conteúdo dos documentos é dado pessoal, parte dele sensível
+(fato d). Hoje o painel de acompanhamento e a tela de revisão exibem os
+campos extraídos sem nenhum tratamento de exposição.
+
+Escopo:
+1. Defina quais campos são sensíveis o suficiente para mascarar em contexto
+   de listagem (o número do documento é o candidato óbvio; decida sobre os
+   demais e justifique).
+2. No painel de acompanhamento, nenhum campo de documento deve aparecer em
+   texto pleno — se algum resumo de campo for mostrado na lista, mascare
+   (ex: "•••.•••.•••-12").
+3. Na tela de revisão, o campo completo pode ser mostrado (é o propósito da
+   tela), mas avalie se o número completo deveria exigir uma ação explícita
+   para revelar (ex: campo mascarado por padrão com botão "mostrar").
+4. Não altere os dados no mock/contrato — o mascaramento é só de exibição.
+
+Restrições explícitas:
+- Não implemente controle de acesso/autenticação real — fora do escopo
+  desta entrega.
+- Não mascare o nome da pessoa (é dado pessoal, mas necessário para o
+  trabalho de conferência de identidade).
+
+Registre em ADR os campos escolhidos e o critério usado para decidir o que
+mascarar, citando o fato (d) do enunciado como motivação.
+
+Escreva testes garantindo que o dado sensível não aparece em texto pleno
+nos componentes de listagem.
+
+Ao final, deixe explícito que esta é uma medida de exibição, não de
+segurança de dados em trânsito/repouso — e o que uma implementação real
+precisaria além disso (ex: campo nunca sair do backend sem necessidade, log
+de acesso).
+```
+
+---
+
+## 19 — Shell de navegação lateral
+
+```
+Crie a branch feature/navigation-sidebar a partir de develop.
+
+Escopo: um shell de navegação lateral compartilhado pelas 3 telas (Envio,
+Acompanhamento, Revisão).
+
+Faça:
+1. Crie um layout compartilhado com uma barra lateral fixa contendo links
+   para /envio e /acompanhamento. A tela de revisão é acessada a partir do
+   painel, não precisa de item próprio na barra — mas deve indicar de
+   algum jeito (breadcrumb ou botão voltar) como retornar ao painel.
+2. Destaque visualmente a rota ativa na barra lateral.
+3. Use componentes de navegação do design system já portado, se existir
+   algum adequado; senão, porte o componente necessário sob demanda (não o
+   pacote inteiro) e registre em ADR, seguindo o mesmo processo das
+   demandas anteriores.
+
+Restrições explícitas:
+- Não adicione itens de navegação para Busca ou Fila de conferência
+  completas — não fazem parte do escopo desta entrega.
+- Avalie se a barra lateral cabe na tela de revisão sem comprometer o
+  espaço da visualização lado a lado do documento. Se comprometer, decida
+  entre colapsar a barra nessa rota ou deixá-la fora do shell, e documente
+  a decisão — não force o layout só para manter consistência visual.
+
+Escreva testes de que a rota ativa é destacada corretamente.
+
+Ao final, aponte qualquer trade-off de espaço que a barra lateral criou na
+tela de revisão, já que ela é a mais apertada das três.
+```
+
+---
+
+## 20 — Aprovação do desenho
+
+```
+pode
+```
+
+---
+
+## 21 — Celular e ações de header
+
+```
+Eu quero que você ajeite a sitedebar na versão de celular, faça uma sidebar
+compativel, e tambem tem uns botoes no designs system no "header" da pagina,
+na tela de envio de "ir para painel" que leva para a tela de acompanhamento,
+e a tela de aconpanhamento tem um botão de "enviar mais" que vou para a tela
+de envio e ao lado dele tem um nomero que fala o total de documentos enviados
+hoje
+```
+
+---
+
+## 22 — Aprovação do desenho
+
+```
+pode
+```
+
+---
+
+## 23 — Publicação
+
+```
+suba as alterações
+```
+
+---
+
+## 24 — Remoção da atribuição
+
+```
+tire essas duas contribuicoes no commit do cluade
+```
+
+---
+
+## 25 — Reafirmação
+
+```
+eu quero que não tenha contribuicão
+```
+
+---
+
+## 26 — Publicação, de novo
+
+```
+suba
+```
+
+---
+
+## 27 — Fechamento da entrega, revisado
+
+```
+Estamos prontos para fechar a entrega. Crie a branch release/v1 a partir de
+develop.
+
+Faça:
+1. Escreva o README.md final: como subir o projeto localmente, quais
+   comandos rodar, o que está mockado versus real, e um parágrafo explicando
+   o que foi escolhido testar e por quê.
+2. Confirme que todos os prompts usados ao longo do projeto estão salvos, na
+   íntegra e em ordem, em /prompts/ — não me deixe esquecer isso, é item
+   obrigatório da entrega.
+3. Confirme que AGENTS.md e qualquer skill/comando/hook configurado estão
+   versionados no repositório.
+4. Rode uma checagem final: build limpo, lint sem erros, testes passando.
+5. Não adicione nenhuma funcionalidade nova aqui — só documentação e
+   finalização. Item adicional: confirme que o README, o índice de ADRs e a especificação
+cobrem também a detecção de duplicidade, o mascaramento de dados sensíveis,
+a navegação lateral e a responsividade — não só as 3 telas originais.
+```

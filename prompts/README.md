@@ -5,7 +5,7 @@ Todos os prompts usados na construção deste projeto, na íntegra e em ordem, e
 
 ## O que está aqui
 
-São **16 prompts**, transcritos literalmente — com os erros de digitação, o
+São **27 prompts**, transcritos literalmente — com os erros de digitação, o
 português informal e as correções de rumo preservados. Não foram limpos nem
 reescritos: o valor de um registro de prompts é mostrar como a conversa
 realmente aconteceu, inclusive onde ela precisou voltar atrás.
@@ -24,7 +24,19 @@ realmente aconteceu, inclusive onde ela precisou voltar atrás.
 | 13  | Tela de revisão        | `/revisao/[id]`, lock otimista                                         |
 | 14  | Publicação             | Push de todas as branches                                              |
 | 15  | Integração             | Prova da fatia vertical, teste de integração                           |
-| 16  | Fechamento             | Este README, os prompts, checagem final                                |
+| 16  | Fechamento             | README de entrega, os prompts, checagem final                          |
+
+E a segunda sessão, que reabriu a entrega:
+
+| #     | Prompt               | O que produziu                                                    |
+| ----- | -------------------- | ----------------------------------------------------------------- |
+| 17    | Duplicidade          | **Nada** — design apresentado, aprovação não veio                 |
+| 18    | Mascaramento         | **Nada** — design apresentado, aprovação não veio                 |
+| 19–20 | Navegação lateral    | Shell, `SidebarNav` portado, ADR-0013                             |
+| 21–22 | Celular e header     | `BottomNav`, ações de header, filtro `desde`, ADR-0014 a ADR-0016 |
+| 23    | Publicação           | Push de `feature/navigation-sidebar`                              |
+| 24–26 | Atribuição           | Reescrita das mensagens de commit, force-push                     |
+| 27    | Fechamento, revisado | Este README, o README final, esta transcrição                     |
 
 ## Como isto foi montado
 
@@ -40,3 +52,10 @@ construído. Três observações de honestidade:
    trabalho — o que também é informação.
 3. **O prompt 11 veio com uma imagem anexada** (captura de tela do bug). A
    imagem não está versionada; o texto que a acompanhou está.
+4. **Os prompts 17 e 18 não produziram código.** Os dois pediram uma feature
+   inteira; nos dois casos o design foi apresentado e a conversa seguiu para o
+   assunto seguinte antes da aprovação. Estão transcritos porque aconteceram, e
+   porque o que ficou por fazer está registrado no `README.md` da raiz, em "O que
+   não foi entregue".
+5. **O prompt 27 é o 16 com um item a mais**, reenviado na segunda sessão. Os
+   dois estão transcritos: o 16 fechou a primeira entrega, o 27 fechou esta.

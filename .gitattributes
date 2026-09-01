@@ -1,0 +1,14 @@
+# Todo texto é LF no repositório e no checkout.
+#
+# Sem isto, um clone no Windows com `core.autocrlf=true` (o padrão do Git for
+# Windows) recebe os arquivos em CRLF, e o `endOfLine: "lf"` do `.prettierrc.json`
+# reprova 34 arquivos em `npm run format:check` — o gate que o README manda rodar.
+# Os blobs já estão em LF, então isto não renormaliza nada: só impede a conversão
+# na saída.
+* text=auto eol=lf
+
+# Binários, para o git não tentar converter nada dentro deles.
+*.png binary
+*.jpg binary
+*.pdf binary
+*.ico binary
